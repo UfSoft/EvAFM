@@ -138,8 +138,8 @@ class BaseDaemon(object):
         logging.getLogger(__name__).trace("Logging setup!")
 
     def run_daemon(self):
-        self.prepare()
         self.setup_logging()
+        self.prepare()
         import logging
         logging.getLogger(__name__).trace("on run_daemon")
         self.daemonize()

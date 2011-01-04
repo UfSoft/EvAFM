@@ -40,8 +40,8 @@ class Source(SourceBase):
 
         log.debug("Setting up the pipeline again.")
         self.pipeline = gst.Pipeline("pipeline-%s" % self.safe_name)
-        self.pipeline.set_property("async-handling", False)
         self.bus = self.pipeline.get_bus()
+        self.bus.add_signal_watch()
         self.bus.set_sync_handler(self.on_bus_messages)
 
         self.source = self.gst_element_factory_make('uridecodebin')
@@ -138,6 +138,7 @@ class Source(SourceBase):
 
             source_stopped.connect(self.revert)
             for checker in self.checkers:
+                log.debug("%s preparing %s", self.name, checker.get_name())
                 checker.prepare()
                 source_stopped.connect(checker.revert)
         return True
@@ -183,6 +184,7 @@ class Source(SourceBase):
 
         for checker in self.checkers:
             try:
+                log.debug("%s reverting %s", self.name, checker.get_name())
                 checker.revert()
             except Exception, err:
                 log.exception(err)
@@ -241,8 +243,10 @@ class Source(SourceBase):
                 log.debug("MESAGE ELEMENT Structure: %s [%s]",
                           message.structure, message.structure.get_name())
         else:
-            log.debug("Message Type: %s(%s)  Structure: %s",
-                      message.type, message.structure and message.structure.get_name() or '', message.structure)
+            log.garbage("Message Type: %s(%s)  Structure: %s",
+                        message.type,
+                        message.structure and message.structure.get_name() or '',
+                        message.structure)
         return True
 
 

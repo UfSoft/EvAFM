@@ -9,9 +9,14 @@
 """
 
 import gst
-from giblets import Component, implements, ExtensionInterface, ExtensionPoint
+from giblets import Attribute, Component, implements, ExtensionInterface, ExtensionPoint
 
-class ISource(ExtensionInterface):
+class IGstComponent(ExtensionInterface):
+    gst_setup_complete = Attribute("Boolean attribute telling us if the gst "
+                                   "related stuff has been setup on the "
+                                   "component")
+
+class ISource(IGstComponent):
 
     def set_id():
         """Set the source id"""
@@ -34,7 +39,7 @@ class ISource(ExtensionInterface):
     def shutdown():
         """shutdown the source"""
 
-class IChecker(ExtensionInterface):
+class IChecker(IGstComponent):
 
     def get_name():
         """returns the interface name"""
@@ -45,6 +50,9 @@ class IChecker(ExtensionInterface):
     def get_pipeline():
         """get the checkers source pipeline"""
 
+    def get_bus():
+        """get the checkers source pipeline bus"""
+
     def prepare():
         """prepares the interface"""
 
@@ -53,6 +61,7 @@ class IChecker(ExtensionInterface):
 
 
 class CheckerBase(Component):
+    gst_setup_complete = False
 
     def get_name(self):
         return self.__class__.__name__
@@ -62,6 +71,9 @@ class CheckerBase(Component):
 
     def get_pipeline(self):
         return self.get_source().pipeline
+
+    def get_bus(self):
+        return self.get_pipeline().get_bus()
 
     def gst_element_factory_make(self, gst_element_name, element_name=None):
         return self.get_source().gst_element_factory_make(gst_element_name,

@@ -16,9 +16,8 @@ pygst.require("0.10")
 import gobject
 gobject.threads_init()
 
-from giblets import ComponentManager
 import giblets.search
-giblets.search.find_plugins_by_entry_point("evafm.sources.checkers")
+from giblets import ComponentManager
 
 from evafm.common.daemonbase import BaseDaemon, BaseOptionParser
 from evafm.common.log import log_levels
@@ -33,6 +32,8 @@ class Daemon(BaseDaemon):
 
     def prepare(self):
         super(Daemon, self).prepare()
+        # Late searching of checker plugins in order to have logging setup
+        giblets.search.find_plugins_by_entry_point("evafm.sources.checkers")
         # Late import pygst steals the `-h` switch
         from evafm.sources.source import Source
         self.source = Source(self.mgr)

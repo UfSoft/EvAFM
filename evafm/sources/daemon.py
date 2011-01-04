@@ -10,8 +10,17 @@
 
 import os
 import logging
+
+import pygst
+pygst.require("0.10")
 import gobject
-from evafm.common.daemonbase import BaseDaemon, BaseOptionParser #, DaemonStopped
+gobject.threads_init()
+
+from giblets import ComponentManager
+import giblets.search
+giblets.search.find_plugins_by_entry_point("evafm.sources.checkers")
+
+from evafm.common.daemonbase import BaseDaemon, BaseOptionParser
 from evafm.common.log import log_levels
 from evafm.sources.signals import source_daemonized, source_undaemonized, source_shutdown
 
@@ -20,12 +29,14 @@ class Daemon(BaseDaemon):
     def __init__(self, source_id, **kwargs):
         super(Daemon, self).__init__(**kwargs)
         self.source_id = source_id
+        self.mgr = ComponentManager()
 
     def prepare(self):
         super(Daemon, self).prepare()
         # Late import pygst steals the `-h` switch
         from evafm.sources.source import Source
-        self.source = Source(self.source_id)
+        self.source = Source(self.mgr)
+        self.source.set_id(self.source_id)
         self.loop = gobject.MainLoop()
 #        self.listener = context.socket(zmq.REQ)
 #        self.listener.bind("ipc://run/sources/0-listen")
@@ -36,26 +47,21 @@ class Daemon(BaseDaemon):
         logging.getLogger(__name__).info("Source Daemon Running")
         source_daemonized.send(self.source_id)
         gobject.idle_add(self.source.start_play)
+#        gobject.timeout_add_seconds(15, self.source.pause_play)
+#        gobject.timeout_add_seconds(20, self.source.start_play)
+#        gobject.timeout_add_seconds(25, self.source.stop_play)
+#        gobject.timeout_add_seconds(30, self.source.start_play)
         self.loop.run()
 
 
     def exit(self):
-#        if not self.exiting:
-#            self.exiting = True
         logging.getLogger(__name__).info("Source Daemon Exiting...")
-        def quit(source_id):
+        def on_source_shutdown(source_id):
             logging.getLogger(__name__).info("Source Daemon Quitting...")
             source_undaemonized.send(source_id)
             self.loop.quit()
-#            import time
-#            time.sleep(0.5) # Some timeout to have signal sent for sure
-        source_shutdown.connect(quit)
+        source_shutdown.connect(on_source_shutdown)
         self.source.shutdown()
-
-#            while not exited:
-#                print "not yet exited"
-#                import time
-#                time.sleep(0.1)
 
     @classmethod
     def cli(cls):

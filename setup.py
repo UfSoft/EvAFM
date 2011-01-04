@@ -41,6 +41,9 @@ setup(name=evafm.__package_name__,
       extract = babel.messages.frontend:extract_messages
          init = babel.messages.frontend:init_catalog
        update = babel.messages.frontend:update_catalog
+
+      [evafm.sources.checkers]
+      silence = evafm.sources.checkers.silence
       """,
       classifiers=[
           'Development Status :: 5 - Alpha',

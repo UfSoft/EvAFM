@@ -19,12 +19,16 @@ setup(name=evafm.__package_name__,
       description=evafm.__summary__,
       long_description=evafm.__description__,
       license=evafm.__license__,
-      platforms="OS Independent - Anywhere Eventlet, ZMQ and GStreamer is known to run.",
+      platforms="OS Independent - Anywhere Eventlet, ZMQ, Eventlet and "
+                "GStreamer is known to run.",
       keywords = "Eventlet ZMQ Gstreamer Audio Network Monitor",
-      packages = ['evafm'],
+      packages = find_packages(),
+      include_package_data = True
       package_data = {
-        'evafm': []
+        'evafm': ['*.cfg']
       },
+      install_requires = ["Distribute", "giblets>=0.2.1", "blinker>=1.1",
+                          "pyzmq>=2.1.0", "pygst"],
       message_extractors = {
         'evafm': [
             ('**.py', 'python', None),

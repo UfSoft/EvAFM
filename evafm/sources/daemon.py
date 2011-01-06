@@ -21,6 +21,7 @@ from giblets import ComponentManager
 
 from evafm.common.daemonbase import BaseDaemon, BaseOptionParser
 from evafm.common.log import log_levels
+from evafm.sources.rpcserver import RPCServer
 from evafm.sources.signals import source_daemonized, source_undaemonized, source_shutdown
 
 class Daemon(BaseDaemon):
@@ -32,12 +33,13 @@ class Daemon(BaseDaemon):
 
     def prepare(self):
         super(Daemon, self).prepare()
-        # Late searching of checker plugins in order to have logging setup
+        # Late searching of checkers in order to have logging properly setup
         giblets.search.find_plugins_by_entry_point("evafm.sources.checkers")
-        # Late import pygst steals the `-h` switch
+        # Late import pygst; it steals the `-h` switch
         from evafm.sources.source import Source
         self.source = Source(self.mgr)
         self.source.set_id(self.source_id)
+        self.rpc_server = RPCServer(self.mgr)
         self.loop = gobject.MainLoop()
 #        self.listener = context.socket(zmq.REQ)
 #        self.listener.bind("ipc://run/sources/0-listen")

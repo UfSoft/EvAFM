@@ -14,13 +14,14 @@ import gst
 
 from giblets import implements, ExtensionPoint
 
-from evafm.sources.interfaces import SourceBase, ISource, IChecker
+from evafm.sources.interfaces import SourceBase, ISource, IChecker, IRPCMethodProvider
+from evafm.sources.rpcserver import export, AUTH_LEVEL_ADMIN, AUTH_LEVEL_READONLY
 from evafm.sources.signals import *
 
 log = logging.getLogger(__name__)
 
 class Source(SourceBase):
-    implements(ISource)
+    implements(ISource, IRPCMethodProvider)
     checkers = ExtensionPoint(IChecker)
 
     def set_id(self, id):
@@ -67,7 +68,7 @@ class Source(SourceBase):
         source_buffered.connect(self.on_source_buffered)
         self.gst_setup_complete = True
 
-
+    @export(AUTH_LEVEL_ADMIN)
     def start_play(self):
         self.prepare()
         ret, state, pending = self.pipeline.get_state(0)
@@ -80,6 +81,7 @@ class Source(SourceBase):
                 self.pipeline.continue_state(True)
 
 
+    @export(AUTH_LEVEL_ADMIN)
     def stop_play(self):
         ret, state, pending = self.pipeline.get_state(0)
         if state is not gst.STATE_NULL:
@@ -89,6 +91,7 @@ class Source(SourceBase):
             if pending is gst.STATE_NULL:
                 self.pipeline.continue_state(True)
 
+    @export(AUTH_LEVEL_ADMIN)
     def pause_play(self):
         self.prepare()
         ret, state, pending = self.pipeline.get_state(0)
@@ -221,26 +224,26 @@ class Source(SourceBase):
         elif message.type == gst.MESSAGE_BUFFERING:
             self.handle_buffering_message(bus, message)
         elif message.type == gst.MESSAGE_STREAM_STATUS:
-            log.debug("MESSAGE_STREAM_STATUS(%s) - Structure: %s",
+            log.trace("MESSAGE_STREAM_STATUS(%s) - Structure: %s",
                       message.type, message.structure)
-            log.debug("Parsed: %s\n\n", message.parse_stream_status())
+            log.trace("Parsed: %s\n\n", message.parse_stream_status())
         elif message.type == gst.MESSAGE_TAG:
-            log.debug("\n\nGST_MESSAGE_TAG: %s\n\n", dict(message.parse_tag()))
+            log.debug("GST_MESSAGE_TAG: %s", dict(message.parse_tag()))
         elif message.type == gst.MESSAGE_ELEMENT:
             if message.structure.get_name() == 'level':
-                log.debug("MESAGE ELEMENT Structure: %s [%s]",
+                log.garbage("MESAGE ELEMENT Structure: %s [%s]",
                             message.structure, message.structure.get_name())
             elif message.structure.get_name() == 'redirect':
-                log.debug("\n\nMESSAGE REDIRECT: %s\n\n", message.structure['redirect'])
+                # Explicit ERROR, need to find out how to handle it
+                log.error("\n\nMESSAGE REDIRECT: %s\n\n", message.structure['redirect'])
                 try:
-                    print("REDIRECT NEW LOCATION: %s\n\n", message.structure['new-location'])
-                    log.debug("REDIRECT NEW LOCATION: %s\n\n", message.structure['new-location'])
+                    log.error("REDIRECT NEW LOCATION: %s\n\n", message.structure['new-location'])
                 except:
                     pass
                 import sys
                 sys.exit()
             else:
-                log.debug("MESAGE ELEMENT Structure: %s [%s]",
+                log.garbage("MESAGE ELEMENT Structure: %s [%s]",
                           message.structure, message.structure.get_name())
         else:
             log.garbage("Message Type: %s(%s)  Structure: %s",
@@ -264,6 +267,39 @@ class Source(SourceBase):
         print "Got a redirect message"
         self.buffer_percent = message.structure['buffer-percent']
 
+    @export(AUTH_LEVEL_ADMIN)
+    def set_uri(self, uri):
+        self.uri = uri
+        self.source.set_property('uri', self.uri)
+
+    @export(AUTH_LEVEL_READONLY)
+    def get_uri(self):
+        return self.uri
+
+    @export(AUTH_LEVEL_ADMIN)
+    def set_name(self, name):
+        self.name = name
+        self.safe_name = '_'.join(self.name.split(' '))
+
+    @export(AUTH_LEVEL_READONLY)
+    def get_name(self):
+        return self.name
+
+    @export(AUTH_LEVEL_ADMIN)
+    def set_buffer_size(self, buffer_size):
+        self.buffer_size = buffer_size
+
+    @export(AUTH_LEVEL_READONLY)
+    def get_buffer_size(self):
+        return self.buffer_size
+
+    @export(AUTH_LEVEL_ADMIN)
+    def set_buffer_duration(self, buffer_duration):
+        self.buffer_duration = buffer_duration
+
+    @export(AUTH_LEVEL_READONLY)
+    def get_buffer_duration(self):
+        return self.buffer_duration
 
 if __name__ == '__main__':
     source = Source("rtmp://h2b.rtp.pt/liveradio/antena180a")

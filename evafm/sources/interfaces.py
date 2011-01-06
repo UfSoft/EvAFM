@@ -9,7 +9,7 @@
 """
 
 import gst
-from giblets import Attribute, Component, implements, ExtensionInterface, ExtensionPoint
+from giblets import Attribute, Component, ExtensionInterface
 
 class IGstComponent(ExtensionInterface):
     gst_setup_complete = Attribute("Boolean attribute telling us if the gst "
@@ -63,6 +63,14 @@ class IChecker(IGstComponent):
 class CheckerBase(Component):
     gst_setup_complete = False
 
+
+    def __repr__(self):
+        return self.__unicode__().encode('utf-8')
+
+    def __unicode__(self):
+        return u'<%s source_name="%s">' % (self.get_name(),
+                                           self.get_source().name.decode('utf8'))
+
     def get_name(self):
         return self.__class__.__name__
 
@@ -113,3 +121,17 @@ class SourceBase(Component):
     def __unicode__(self):
         return u'<Source id="%s" name="%s">' % (self.id, self.name.decode('utf8'))
 
+
+class IZMQRPC(ExtensionInterface):
+    def listen():
+        """
+        """
+    def stop():
+        """
+        """
+    def register_rpc_method():
+        """
+        """
+
+class IRPCMethodProvider(ExtensionInterface):
+    pass

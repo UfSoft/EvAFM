@@ -12,8 +12,31 @@ import gst
 import logging
 from evafm.common.zmqblinker import zmqsignal as signal
 from evafm.sources.interfaces import implements, CheckerBase, IChecker
+import gobject
 
 log = logging.getLogger(__name__)
+
+class TimeoutFunction(object):
+    def __init__(self, timeout, func, *args, **kwargs):
+        self.timeout = timeout
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def start(self):
+        self.id = gobject.timeout_add_seconds(self.timeout, self.func,
+                                              *self.args, **self.kwargs)
+
+    def restart(self, timeout=None):
+        if timeout:
+            self.timeout = timeout
+        if self.id:
+            self.cancel()
+        self.start()
+
+    def cancel(self):
+        gobject.source_remove(self.id)
+        self.id = None
 
 class SilenceChecker(CheckerBase):
     implements(IChecker)
@@ -42,7 +65,7 @@ class SilenceChecker(CheckerBase):
         self.pipeline.add(self.sink)
         self.level.link(self.sink)
         self.gst_setup_complete = True
-        log.debug("%r of %s prepared", self, self.source.name)
+        log.debug("%r prepared", self)
 
     def revert(self, sender=None):
         if not self.gst_setup_complete:
@@ -55,10 +78,11 @@ class SilenceChecker(CheckerBase):
         self.pipeline.remove(self.level)
         self.pipeline.remove(self.sink)
         self.gst_setup_complete = False
-        log.debug("%r of %s reverted", self, self.source.name)
+        log.debug("%r reverted", self)
 
     def check_bus_level_messages(self, bus, message):
-        if not message.structure or (message.structure and message.structure.get_name() != 'level'):
+        if not message.structure or (
+                message.structure and message.structure.get_name() != 'level'):
             return True
 
         rms_left, rms_right = message.structure['rms']

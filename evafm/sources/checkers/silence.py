@@ -10,8 +10,9 @@
 
 import gst
 import logging
+from giblets import implements
 from evafm.common.zmqblinker import zmqsignal as signal
-from evafm.sources.interfaces import implements, CheckerBase, IChecker
+from evafm.sources.interfaces import CheckerBase, IChecker
 import gobject
 
 log = logging.getLogger(__name__)

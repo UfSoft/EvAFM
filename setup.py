@@ -33,7 +33,7 @@ setup(name=evafm.__package_name__,
       },
       entry_points = """
       [console_scripts]
-      evafm-core   = evafm.runner:start_daemon
+      evafm-core   = evafm.core.daemon:start_daemon
       evafm-source = evafm.sources.daemon:start_daemon
 
       [distutils.commands]

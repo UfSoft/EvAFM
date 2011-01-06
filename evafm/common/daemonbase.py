@@ -12,16 +12,36 @@ import os
 import sys
 import errno
 import signal
+import pwd
+import grp
 from os import path
 from optparse import OptionParser
 from evafm import __version__, __package_name__
-from evafm.common.log import set_loglevel, setup_logging
+from evafm.common.log import set_loglevel, setup_logging, log_levels
 
 class BaseOptionParser(OptionParser):
     def __init__(self):
         OptionParser.__init__(self, usage="usage: %prog [options] source_id",
                               version=("%s:%%prog " % __package_name__) +
                               __version__)
+
+        self.add_option('-p', '--pidfile', help="Pidfile path",
+                        default=None, metavar='PIDFILE_PATH')
+        self.add_option('-d', '--detach', action="store_true", default=False,
+                        help="Detach process(daemonize) Default: %default")
+        self.add_option('-u', '--uid', default=os.getuid(),
+                        help="User ID. Default: %s(%%default)" %
+                              pwd.getpwuid(os.getuid()).pw_name)
+        self.add_option('-g', '--gid', default=os.getgid(),
+                        help="Group ID. Default: %s(%%default)" %
+                        grp.getgrgid(os.getgid()).gr_name)
+        self.add_option('-w', '--working-dir', default=os.getcwd(),
+                        help="The working dir the process should change to. "
+                             "Default: %default")
+        self.add_option('-l', '--logfile', help="Log file path")
+        self.add_option('-L', '--log-level', default="info", dest="loglevel",
+                        choices=sorted(log_levels, key=lambda k: log_levels[k]),
+                        help="The desired logging level. Default: %default")
 
 class BaseDaemon(object):
 

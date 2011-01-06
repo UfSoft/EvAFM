@@ -23,7 +23,7 @@ setup(name=evafm.__package_name__,
                 "GStreamer is known to run.",
       keywords = "Eventlet ZMQ Gstreamer Audio Network Monitor",
       packages = find_packages(),
-      include_package_data = True
+      include_package_data = True,
       package_data = {
         'evafm': ['*.cfg']
       },

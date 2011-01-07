@@ -11,6 +11,7 @@
 import logging
 from giblets import ComponentManager
 from evafm.core.core import Core
+from evafm.core.database import DatabaseManager
 from evafm.core.signals import core_daemonized, core_undaemonized, core_shutdown
 from evafm.common.daemonbase import BaseDaemon, BaseOptionParser
 
@@ -21,6 +22,7 @@ class Daemon(BaseDaemon):
         super(Daemon, self).prepare()
         self.mgr = ComponentManager()
         self.core = Core(self.mgr)
+        self.db = DatabaseManager(self.mgr)
 
     @classmethod
     def cli(cls):

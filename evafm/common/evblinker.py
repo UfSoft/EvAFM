@@ -56,6 +56,7 @@ class NamedSignal(blinker.base.NamedSignal):
             pile.spawn(spawned_receiver, receiver, sender, **kwargs)
         return pile
 
+
 class Namespace(blinker.base.Namespace):
     """A mapping of signal names to signals."""
 

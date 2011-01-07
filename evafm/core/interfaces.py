@@ -11,4 +11,7 @@
 from giblets import ExtensionInterface
 
 class ICoreComponent(ExtensionInterface):
-    pass
+    def connect_signals():
+        """Function wich will be called so that the extension can connect itself
+        to the signals it wishes to
+        """

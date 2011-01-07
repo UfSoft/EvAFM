@@ -27,8 +27,11 @@ setup(name=evafm.__package_name__,
       package_data = {
         'evafm': ['*.cfg']
       },
-      install_requires = ["Distribute", "giblets>=0.2.1", "blinker>=1.1",
-                          "pyzmq>=2.1.0", "pygst"],
+      install_requires = [
+        "Distribute", "giblets>=0.2.1", "blinker>=1.1",
+        "pyzmq>=2.1.0,==2.1.0dev",
+        #"pygst"
+      ],
       message_extractors = {
         'evafm': [
             ('**.py', 'python', None),

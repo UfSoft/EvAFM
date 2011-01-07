@@ -161,6 +161,7 @@ class RPCServer(Component):
             failure = ("Failed to call method \"%s\" with args %s and kwargs %s"
                        % (method, args, kwargs))
             log.error(failure)
+            log.exception(err)
             success = False
             etype, evalue, etb = sys.exc_info()
             tb = traceback.format_exception(etype, evalue, etb)

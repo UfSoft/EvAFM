@@ -14,7 +14,6 @@ import giblets.search
 from giblets import ComponentManager
 
 from evafm.common.daemonbase import BaseDaemon, BaseOptionParser
-from evafm.sources.signals import source_daemonized, source_undaemonized, source_shutdown
 
 class Daemon(BaseDaemon):
 
@@ -40,18 +39,14 @@ class Daemon(BaseDaemon):
         self.loop = gobject.MainLoop()
 
     def run(self):
-        import gobject
+        from evafm.sources.signals import source_daemonized
         logging.getLogger(__name__).info("Source Daemon Running")
         source_daemonized.send(self.source_id)
-        gobject.idle_add(self.source.start_play)
-#        gobject.timeout_add_seconds(15, self.source.pause_play)
-#        gobject.timeout_add_seconds(20, self.source.start_play)
-#        gobject.timeout_add_seconds(25, self.source.stop_play)
-#        gobject.timeout_add_seconds(30, self.source.start_play)
         self.loop.run()
 
 
     def exit(self):
+        from evafm.sources.signals import source_undaemonized, source_shutdown
         logging.getLogger(__name__).info("Source Daemon Exiting...")
         def on_source_shutdown(source_id):
             logging.getLogger(__name__).info("Source Daemon Quitting...")

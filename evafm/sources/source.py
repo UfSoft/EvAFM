@@ -24,13 +24,10 @@ class Source(SourceBase):
     implements(ISource, IRPCMethodProvider)
     checkers = ExtensionPoint(IChecker)
 
+    id = uri = buffer_size = name = buffer_duration = None
+
     def set_id(self, id):
         self.id = id
-        self.uri = "rtmp://h2b.rtp.pt/liveradio/antena180a"
-        self.name = "Antena 1"
-        self.safe_name = '_'.join(self.name.split(' '))
-        self.buffer_size = 1.0
-        self.buffer_duration = 3.0
 
     def prepare(self):
         if self.gst_setup_complete:
@@ -255,7 +252,7 @@ class Source(SourceBase):
 
     def handle_buffering_message(self, bus, message):
         self.buffer_percent = message.structure['buffer-percent']
-        log.debug("Source \"%s\" Buffer at %s%%", self.name, self.buffer_percent)
+        log.trace("Source \"%s\" Buffer at %s%%", self.name, self.buffer_percent)
         source_buffering.send(self.id, buffer_percent=self.buffer_percent)
         if self.buffer_percent == 100:
             source_buffered.send(self.id)
@@ -270,7 +267,8 @@ class Source(SourceBase):
     @export(AUTH_LEVEL_ADMIN)
     def set_uri(self, uri):
         self.uri = uri
-        self.source.set_property('uri', self.uri)
+        if self.uri != uri and hasattr(self, 'source'):
+            self.source.set_property('uri', self.uri)
 
     @export(AUTH_LEVEL_READONLY)
     def get_uri(self):

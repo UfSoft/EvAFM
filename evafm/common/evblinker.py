@@ -36,7 +36,7 @@ class NamedSignal(blinker.base.NamedSignal):
         # Using '*sender' rather than 'sender=None' allows 'sender' to be
         # used as a keyword argument- i.e. it's an invisible name in the
         # function signature.
-        log.debug("signal: %s  sender: %s  kwargs: %s", self.name, sender, kwargs)
+        log.trace("signal: %s  sender: %s  kwargs: %s", self.name, sender, kwargs)
         if len(sender) == 0:
             sender = None
         elif len(sender) > 1:

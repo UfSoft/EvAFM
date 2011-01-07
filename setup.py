@@ -50,7 +50,10 @@ setup(name=evafm.__package_name__,
        update = babel.messages.frontend:update_catalog
 
       [evafm.sources.checkers]
-      silence = evafm.sources.checkers.silence
+      silence = evafm.checkers.silence.checker
+
+      [evafm.core.checkers]
+      silence = evafm.checkers.silence.core
       """,
       classifiers=[
           'Development Status :: 5 - Alpha',

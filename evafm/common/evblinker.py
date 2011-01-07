@@ -8,8 +8,8 @@
     :license: BSD, see LICENSE for more details.
 """
 
-import logging
 import eventlet
+import logging
 
 import blinker.base
 from evafm.common import context
@@ -36,7 +36,6 @@ class NamedSignal(blinker.base.NamedSignal):
         # Using '*sender' rather than 'sender=None' allows 'sender' to be
         # used as a keyword argument- i.e. it's an invisible name in the
         # function signature.
-        log.trace("signal: %s  sender: %s  kwargs: %s", self.name, sender, kwargs)
         if len(sender) == 0:
             sender = None
         elif len(sender) > 1:
@@ -45,16 +44,24 @@ class NamedSignal(blinker.base.NamedSignal):
         else:
             sender = sender[0]
 
+        log.trace("signal: %s  sender: %s  kwargs: %s", self.name, sender, kwargs)
+
         if not self.receivers:
             return []
 
         def spawned_receiver(receiver, sender, **kwargs):
             return receiver, receiver(sender, **kwargs)
 
+        results = []
+        for receiver in self.receivers_for(sender):
+            results.append((receiver, receiver(sender, **kwargs)))
+        return results
+
         pile = eventlet.GreenPile(self.pool)
         for receiver in self.receivers_for(sender):
             pile.spawn(spawned_receiver, receiver, sender, **kwargs)
         return pile
+
 
 
 class Namespace(blinker.base.Namespace):

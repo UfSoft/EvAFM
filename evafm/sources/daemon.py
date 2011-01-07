@@ -8,6 +8,9 @@
     :license: BSD, see LICENSE for more details.
 """
 
+from eventlet.hubs import use_hub
+use_hub('zeromq')
+
 import logging
 
 import giblets.search

@@ -15,3 +15,10 @@ class ICoreComponent(ExtensionInterface):
         """Function wich will be called so that the extension can connect itself
         to the signals it wishes to
         """
+
+class IDatabaseComponent(ExtensionInterface):
+
+    def upgrade_database():
+        """Function which will be called so that the extension can upgrade
+        it's tables.
+        """

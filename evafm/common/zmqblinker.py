@@ -8,7 +8,6 @@
     :license: BSD, see LICENSE for more details.
 """
 
-#import zmq
 import logging
 
 import blinker.base

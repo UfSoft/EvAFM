@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    evafm.sources.checkers.silence
-    ~~~~~~~
+    evafm.checkers.silence.checker
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
     :copyright: © 2011 UfSoft.org - Pedro Algarvio (pedro@algarvio.me)

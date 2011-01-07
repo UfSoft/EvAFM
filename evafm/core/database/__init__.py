@@ -19,15 +19,17 @@ from sqlalchemy import orm
 from sqlalchemy.engine.url import URL
 from migrate.versioning.api import upgrade
 from migrate.versioning.repository import Repository
-from giblets import implements, Component
+from giblets import implements, Component, ExtensionPoint
 from evafm.core.database import models, upgrades
-from evafm.core.interfaces import ICoreComponent
+from evafm.core.interfaces import ICoreComponent, IDatabaseComponent
 from evafm.core.signals import *
 
 log = logging.getLogger(__name__)
 
 class DatabaseManager(Component):
     implements(ICoreComponent)
+
+    components = ExtensionPoint(IDatabaseComponent)
 
     def connect_signals(self):
         core_daemonized.connect(self.__on_core_daemonized)
@@ -57,13 +59,19 @@ class DatabaseManager(Component):
             session.commit()
 
         schema_version = session.query(models.SchemaVersion).first()
-        if schema_version.version >= repository.latest:
-            log.info("No database upgrade required")
-            return
+        if schema_version.version < repository.latest:
+            log.warn("Upgrading database (from -> to...)")
+            upgrade(self.create_engine(), repository)
+            log.warn("Upgrade complete")
+        else:
+            log.debug("No database upgrade required")
 
-        log.warn("Upgrading database (from -> to...)")
-        upgrade(self.create_engine(), repository)
-        log.warn("Upgrade complete")
+        for component in self.components:
+            log.debug("Checking required upgrade for %s",
+                      component.__class__.__name__)
+            component.upgrade_database(
+                self.create_engine(), session, models.SchemaVersion
+            )
 
 
     def __on_core_shutdown(self, core):

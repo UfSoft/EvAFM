@@ -9,10 +9,9 @@
 """
 
 import logging
+import giblets.search
 from giblets import ComponentManager
-from evafm.core.core import Core
-from evafm.core.database import DatabaseManager
-from evafm.core.signals import core_daemonized, core_undaemonized, core_shutdown
+
 from evafm.common.daemonbase import BaseDaemon, BaseOptionParser
 
 
@@ -21,8 +20,11 @@ class Daemon(BaseDaemon):
     def prepare(self):
         super(Daemon, self).prepare()
         self.mgr = ComponentManager()
-        self.core = Core(self.mgr)
+        giblets.search.find_plugins_by_entry_point("evafm.core.checkers")
+        from evafm.core.database import DatabaseManager
         self.db = DatabaseManager(self.mgr)
+        from evafm.core.core import Core
+        self.core = Core(self.mgr)
 
     @classmethod
     def cli(cls):
@@ -42,11 +44,13 @@ class Daemon(BaseDaemon):
         return cli.run_daemon()
 
     def run(self):
+        from evafm.core.signals import core_daemonized
         logging.getLogger(__name__).info("Core Daemon Running")
         core_daemonized.send(self)
         self.core.run()
 
     def exit(self):
+        from evafm.core.signals import core_undaemonized, core_shutdown
         logging.getLogger(__name__).info("Core Daemon Exiting...")
         core_undaemonized.send(self)
         def on_core_shutdown(sender):

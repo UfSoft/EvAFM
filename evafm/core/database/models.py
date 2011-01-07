@@ -188,11 +188,6 @@ class Source(Model):
     buffer_size     = db.Column(db.Float, default=1)    # 1 Mb buffer
     buffer_duration = db.Column(db.Float, default=3)    # 3 secs buffer
 
-    # Relations
-    silence_checker = db.relation("SilenceCheckerProperties", backref="source",
-                                  uselist=False, lazy=False,
-                                  cascade="all, delete, delete-orphan")
-
     def __init__(self, uri, name, enabled=True, buffer_size=1, buffer_duration=3):
         self.uri = uri
         self.name = name
@@ -208,28 +203,6 @@ class Source(Model):
 #            'enabled': self.enabled,
 #            'buffer_size': self.buffer_size,
 #            'buffer_duration': self.buffer_duration
-#        }
-
-
-class SilenceCheckerProperties(Model):
-    __tablename__   = 'silence_checkers_properties'
-
-    source_id       = db.Column(db.ForeignKey("sources.id"), primary_key=True)
-    min_tolerance   = db.Column(db.Integer, default=4)
-    max_tolerance   = db.Column(db.Integer, default=1)
-    silence_level   = db.Column(db.Float, default=-65.0)
-
-    def __init__(self, min_tolerance, max_tolerance, silence_level):
-        self.min_tolerance = min_tolerance
-        self.max_tolerance = max_tolerance
-        self.silence_level = silence_level
-#
-#    def to_dict(self):
-#        return {
-#            "source_id": self.source_id,
-#            "min_tolerance": self.min_tolerance,
-#            "max_tolerance": self.max_tolerance,
-#            "silence_level": self.silence_level
 #        }
 
 

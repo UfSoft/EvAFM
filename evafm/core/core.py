@@ -22,9 +22,8 @@ class Core(Component):
     def __init__(self, *args, **kwargs):
         super(Core, self).__init__(*args, **kwargs)
         for component in self.components:
-            print component
+            log.debug("Connecting signals for %s", component.__class__.__name__)
             component.connect_signals()
-
 
     def run(self):
         self.running = True

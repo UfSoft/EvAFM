@@ -11,9 +11,7 @@
 import logging
 import giblets.search
 from giblets import ComponentManager
-
 from evafm.common.daemonbase import BaseDaemon, BaseOptionParser
-
 
 class Daemon(BaseDaemon):
 
@@ -21,10 +19,9 @@ class Daemon(BaseDaemon):
         super(Daemon, self).prepare()
         self.mgr = ComponentManager()
         giblets.search.find_plugins_by_entry_point("evafm.core.checkers")
-        from evafm.core.database import DatabaseManager
-        self.db = DatabaseManager(self.mgr)
         from evafm.core.core import Core
         self.core = Core(self.mgr)
+        self.core.activate()
 
     @classmethod
     def cli(cls):

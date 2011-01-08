@@ -32,7 +32,7 @@ class SilenceCheckerProperties(Model):
         self.max_tolerance = max_tolerance
         self.silence_level = silence_level
 
-class SilenceCheckerDatabase(Component):
+class SilenceCheckerCore(Component):
     implements(IDatabaseComponent)
 
     def upgrade_database(self, engine, session, SchemaVersion):

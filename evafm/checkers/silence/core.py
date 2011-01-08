@@ -54,8 +54,11 @@ class SilenceCheckerDatabase(Component):
             log.warn("Upgrade complete")
         else:
             log.debug("No database upgrade required")
+
+    def setup_relations(self):
         from evafm.core.database.models import Source
         Source.silence_checker = db.relation(
             "SilenceCheckerProperties", backref="source", uselist=False,
             lazy=False, cascade="all, delete, delete-orphan"
         )
+

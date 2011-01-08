@@ -120,18 +120,3 @@ class SourceBase(Component):
 
     def __unicode__(self):
         return u'<Source id="%s" name="%s">' % (self.id, self.name.decode('utf8'))
-
-
-class IZMQRPC(ExtensionInterface):
-    def listen():
-        """
-        """
-    def stop():
-        """
-        """
-    def register_rpc_method():
-        """
-        """
-
-class IRPCMethodProvider(ExtensionInterface):
-    pass

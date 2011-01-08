@@ -14,8 +14,9 @@ import gst
 
 from giblets import implements, ExtensionPoint
 
-from evafm.sources.interfaces import SourceBase, ISource, IChecker, IRPCMethodProvider
-from evafm.sources.rpcserver import export, AUTH_LEVEL_ADMIN, AUTH_LEVEL_READONLY
+from evafm.sources.interfaces import SourceBase, ISource, IChecker
+from evafm.common.interfaces import IRPCMethodProvider
+from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN, AUTH_LEVEL_READONLY
 from evafm.sources.signals import *
 
 log = logging.getLogger(__name__)

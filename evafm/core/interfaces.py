@@ -12,13 +12,21 @@ from giblets import ExtensionInterface
 
 class ICoreComponent(ExtensionInterface):
     def connect_signals():
-        """Function wich will be called so that the extension can connect itself
+        """
+        Function wich will be called so that the extension can connect itself
         to the signals it wishes to
         """
 
 class IDatabaseComponent(ExtensionInterface):
 
-    def upgrade_database():
-        """Function which will be called so that the extension can upgrade
+    def upgrade_database(engine, session, schema_version_model):
+        """
+        Function which will be called so that the extension can upgrade
         it's tables.
+        """
+
+    def setup_relations():
+        """
+        Function called in order for the extension to setup the database
+        relashionships between it's tables and EvAFM's
         """

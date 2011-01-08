@@ -35,6 +35,7 @@ class DatabaseManager(Component):
         core_daemonized.connect(self.__on_core_daemonized)
         core_prepared.connect(self.__on_core_prepared)
         core_shutdown.connect(self.__on_core_shutdown)
+        database_upgraded.connect(self.__on_database_upgraded)
 
     def __on_core_daemonized(self, core):
         self.core = core
@@ -72,7 +73,14 @@ class DatabaseManager(Component):
             component.upgrade_database(
                 self.create_engine(), session, models.SchemaVersion
             )
+        database_upgraded.send(self)
 
+    def __on_database_upgraded(self, sender):
+        for component in self.components:
+            log.debug("Setting database relations for %s",
+                      component.__class__.__name__)
+            component.setup_relations()
+        database_setup.send(self)
 
     def __on_core_shutdown(self, core):
         self.engine.close()

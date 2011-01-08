@@ -33,15 +33,12 @@ class DatabaseManager(Component):
 
     def connect_signals(self):
         core_daemonized.connect(self.__on_core_daemonized)
-        core_prepared.connect(self.__on_core_prepared)
         core_shutdown.connect(self.__on_core_shutdown)
         database_upgraded.connect(self.__on_database_upgraded)
 
     def __on_core_daemonized(self, core):
         self.core = core
         self.engine = self.create_engine()
-
-    def __on_core_prepared(self, core):
         if not self.engine.has_table(models.SchemaVersion.__tablename__):
             log.info("Creating database schema table")
             try:
@@ -74,6 +71,7 @@ class DatabaseManager(Component):
                 self.create_engine(), session, models.SchemaVersion
             )
         database_upgraded.send(self)
+        self.engine = self.create_engine()
 
     def __on_database_upgraded(self, sender):
         for component in self.components:

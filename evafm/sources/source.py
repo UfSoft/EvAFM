@@ -298,6 +298,8 @@ class Source(SourceBase):
 
     @export(AUTH_LEVEL_ADMIN)
     def set_buffer_size(self, buffer_size):
+        if self.buffer_size != buffer_size and hasattr(self, 'source'):
+            self.source.set_property("buffer-size", buffer_size*1024*1024)
         self.buffer_size = buffer_size
 
     @export(AUTH_LEVEL_READONLY)
@@ -306,6 +308,8 @@ class Source(SourceBase):
 
     @export(AUTH_LEVEL_ADMIN)
     def set_buffer_duration(self, buffer_duration):
+        if self.buffer_duration != buffer_duration and hasattr(self, 'source'):
+            self.source.set_property("buffer-duration", buffer_duration*10e8)
         self.buffer_duration = buffer_duration
 
     @export(AUTH_LEVEL_READONLY)

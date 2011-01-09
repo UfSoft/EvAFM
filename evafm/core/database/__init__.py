@@ -83,7 +83,8 @@ class DatabaseManager(Component):
         database_setup.send(self)
 
     def __on_core_shutdown(self, core):
-        self.engine.close()
+        # For now nothing to do
+        pass
 
     def create_engine(self):
         log.debug("Creating database engine")

@@ -11,6 +11,12 @@
 from giblets import ExtensionInterface
 
 class ICoreComponent(ExtensionInterface):
+    def activate():
+        """
+        Function to activate the extension component. Might be used for early
+        setup's.
+        """
+
     def connect_signals():
         """
         Function wich will be called so that the extension can connect itself
@@ -30,3 +36,6 @@ class IDatabaseComponent(ExtensionInterface):
         Function called in order for the extension to setup the database
         relashionships between it's tables and EvAFM's
         """
+
+class ICheckerCore(ExtensionInterface):
+    pass

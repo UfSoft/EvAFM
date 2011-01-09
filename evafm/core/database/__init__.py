@@ -31,6 +31,9 @@ class DatabaseManager(Component):
 
     components = ExtensionPoint(IDatabaseComponent)
 
+    def activate(self):
+        self.engine = self.create_engine()
+
     def connect_signals(self):
         core_daemonized.connect(self.__on_core_daemonized)
         core_shutdown.connect(self.__on_core_shutdown)
@@ -38,7 +41,6 @@ class DatabaseManager(Component):
 
     def __on_core_daemonized(self, core):
         self.core = core
-        self.engine = self.create_engine()
         if not self.engine.has_table(models.SchemaVersion.__tablename__):
             log.info("Creating database schema table")
             try:

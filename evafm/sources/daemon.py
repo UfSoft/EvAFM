@@ -32,13 +32,16 @@ class Daemon(BaseDaemon):
         pygst.require("0.10")
         import gobject
         gobject.threads_init()
-        from evafm.sources.source import Source
         from evafm.sources.rpcserver import RPCServer
+        from evafm.sources.source import Source
         # Late searching of checkers in order to have logging properly setup
         giblets.search.find_plugins_by_entry_point("evafm.sources.checkers")
         self.source = Source(self.mgr)
         self.source.set_id(self.source_id)
         self.rpc_server = RPCServer(self.mgr)
+        gobject.timeout_add_seconds(
+            self.detach_process and 2 or 0, self.source.setup_heart
+        )
         self.loop = gobject.MainLoop()
 
     def run(self):
@@ -70,7 +73,7 @@ class Daemon(BaseDaemon):
 
 
         cli = cls(args[0], pidfile=options.pidfile, logfile=options.logfile,
-                  detach_process=options.detach, uid=options.uid,
+                  detach_process=options.detach_process, uid=options.uid,
                   gid=options.gid, working_directory=options.working_dir,
                   loglevel=options.loglevel)
         return cli.run_daemon()

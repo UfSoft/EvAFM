@@ -8,10 +8,16 @@
     :license: BSD, see LICENSE for more details.
 """
 
+from eventlet.hubs import use_hub
+use_hub('zeromq')
+from eventlet import debug
+debug.hub_blocking_detection(True, 0.5)
+
 import logging
 import giblets.search
 from giblets import ComponentManager
 from evafm.common.daemonbase import BaseDaemon, BaseOptionParser
+
 
 class Daemon(BaseDaemon):
 
@@ -35,7 +41,7 @@ class Daemon(BaseDaemon):
                         "options\n")
 
         cli = cls(pidfile=options.pidfile, logfile=options.logfile,
-                  detach_process=options.detach, uid=options.uid,
+                  detach_process=options.detach_process, uid=options.uid,
                   gid=options.gid, working_directory=options.working_dir,
                   loglevel=options.loglevel)
         return cli.run_daemon()

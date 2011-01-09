@@ -11,12 +11,14 @@
 import logging
 import gobject
 import gst
+import zmq
+from zmq import devices
 
 from giblets import implements, ExtensionPoint
 
-from evafm.sources.interfaces import SourceBase, ISource, IChecker
 from evafm.common.interfaces import IRPCMethodProvider
 from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN, AUTH_LEVEL_READONLY
+from evafm.sources.interfaces import SourceBase, ISource, IChecker
 from evafm.sources.signals import *
 
 log = logging.getLogger(__name__)
@@ -26,6 +28,16 @@ class Source(SourceBase):
     checkers = ExtensionPoint(IChecker)
 
     id = uri = buffer_size = name = buffer_duration = None
+
+    def setup_heart(self):
+        log.debug("Setting up Heart!")
+        self.heart = devices.ThreadDevice(zmq.FORWARDER, zmq.SUB, zmq.XREQ)
+        self.heart.setsockopt_in(zmq.SUBSCRIBE, "")
+        self.heart.connect_in("ipc://run/sources-heartbeat-pub")
+        self.heart.connect_out("ipc://run/sources-heartbeat-req")
+        self.heart.setsockopt_out(zmq.IDENTITY, self.id)
+        self.heart.start()
+        log.debug("Heart Setup!")
 
     def set_id(self, id):
         self.id = id

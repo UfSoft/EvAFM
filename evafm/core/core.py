@@ -10,11 +10,12 @@
 
 import logging
 import eventlet
-from giblets import Component, ComponentManager, ExtensionPoint
+import eventlet.debug
+from giblets import Component, ExtensionPoint
 from evafm.core.interfaces import ICoreComponent
 from evafm.core.database import DatabaseManager
 from evafm.core.sources import SourcesManager
-from evafm.core.signals import *
+from evafm.core.signals import core_prepared
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +27,10 @@ class Core(Component):
         self.database_manager = DatabaseManager(self.compmgr)
         self.sources_manager = SourcesManager(self.compmgr)
         for component in self.components:
-            log.debug("Connecting signals for %s", component.__class__.__name__)
+            component_name = component.__class__.__name__
+            log.debug("Activating %s", component_name)
+            component.activate()
+            log.debug("Connecting signals for %s", component_name)
             component.connect_signals()
 
     def run(self):

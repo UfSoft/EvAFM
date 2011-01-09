@@ -27,7 +27,8 @@ class BaseOptionParser(OptionParser):
 
         self.add_option('-p', '--pidfile', help="Pidfile path",
                         default=None, metavar='PIDFILE_PATH')
-        self.add_option('-d', '--detach', action="store_true", default=False,
+        self.add_option('-d', '--detach', action="store_true",
+                        default=False, dest="detach_process",
                         help="Detach process(daemonize) Default: %default")
         self.add_option('-u', '--uid', default=os.getuid(),
                         help="User ID. Default: %s(%%default)" %
@@ -87,9 +88,18 @@ class BaseDaemon(object):
             if gp:
                 self.gid = gp.gr_gid
 
+    def check_pid(self):
+        if not self.pidfile:
+            return
+        if os.path.isfile(self.pidfile):
+            print "Pidfile %r exists! Exiting" % self.pidfile
+            sys.exit(1)
+
+
     def write_pid(self):
         if not self.pidfile:
             return
+        self.check_pid()
         self.__pid = os.getpid()
         f = open(self.pidfile,'wb')
         f.write(str(self.__pid))
@@ -103,7 +113,7 @@ class BaseDaemon(object):
         @type pidfile: C{str}
         @param pidfile: The path to the PID tracking file.
         """
-        if not self.detach_process or not self.pidfile:
+        if not os.path.isfile(self.pidfile):
             return
         import logging
         log = logging.getLogger(__name__)
@@ -120,14 +130,17 @@ class BaseDaemon(object):
     def drop_privileges(self):
         import logging
         log = logging.getLogger(__name__)
-        log.trace("Dropping privileges")
+        if self.uid or self.gid:
+            log.trace("Dropping privileges")
         if self.uid:
             try:
+                log.trace("Setting UID to %s", self.uid)
                 os.setuid(self.uid)
             except Exception, err:
                 log.error(err)
         if self.gid:
             try:
+                log.trace("Setting GID to %s", self.gid)
                 os.setgid(self.gid)
             except Exception, err:
                 log.error(err)
@@ -135,6 +148,8 @@ class BaseDaemon(object):
     def daemonize(self):
         if not self.detach_process:
             return
+        import logging, time
+        logging.getLogger(__name__).trace("Forking process")
         os.umask(077)
         # See http://www.erlenstar.demon.co.uk/unix/faq_toc.html#TOC16
         if os.fork():   # launch child and...
@@ -150,6 +165,7 @@ class BaseDaemon(object):
                 if e.errno != errno.EBADF:
                     raise
         os.close(null)
+        logging.getLogger(__name__).trace("Process forked!")
 
     def setup_logging(self):
         setup_logging(self.logfile)
@@ -157,13 +173,20 @@ class BaseDaemon(object):
         set_loglevel(logging.getLogger('evafm'), self.loglevel)
         logging.getLogger(__name__).trace("Logging setup!")
 
+    def change_working_dir(self):
+        import logging
+        logging.getLogger(__name__).trace("Changing working directory...")
+        os.chdir(self.working_directory)
+        logging.getLogger(__name__).trace("Working directory is now %r",
+                                          os.getcwd())
+
     def run_daemon(self):
         self.setup_logging()
         self.prepare()
         import logging
         logging.getLogger(__name__).trace("on run_daemon")
         self.daemonize()
-        os.chdir(self.working_directory)
+        self.change_working_dir()
         self.drop_privileges()
         self.write_pid()
         signal.signal(signal.SIGTERM, self._exit)   # Terminate

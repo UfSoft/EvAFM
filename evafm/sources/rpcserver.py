@@ -13,8 +13,6 @@ import zmq
 import logging
 import gobject
 import traceback
-from types import FunctionType
-from giblets import implements, Component, ExtensionPoint
 from evafm.common import context, rpcserver
 from evafm.sources.signals import source_daemonized, source_undaemonized
 
@@ -63,7 +61,7 @@ class RPCServer(rpcserver.RPCServer):
 #            message = self.rep.recv_pyobj()
             method = message.get('method')
             args = message.get('args', [])
-            if not isinstance(args, (list, float)):
+            if not isinstance(args, (list, tuple)):
                 args = [args]
             kwargs = message.get('kwargs', {})
             self.rep.send_pyobj(self.handle_rpc_call(method, args, kwargs))

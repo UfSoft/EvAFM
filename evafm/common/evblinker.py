@@ -33,6 +33,7 @@ class NamedSignal(blinker.base.NamedSignal):
         :param \*\*kwargs: Data to be sent to receivers.
 
         """
+        waitall = kwargs.pop('_waitall', False)
         # Using '*sender' rather than 'sender=None' allows 'sender' to be
         # used as a keyword argument- i.e. it's an invisible name in the
         # function signature.
@@ -55,16 +56,20 @@ class NamedSignal(blinker.base.NamedSignal):
         if not self.receivers:
             return []
 
-        def spawned_receiver(receiver, sender, **kwargs):
-            return receiver, receiver(sender, **kwargs)
+        if waitall:
+            results = []
+            for receiver in self.receivers_for(sender):
+                results.append((receiver, receiver(sender, **kwargs)))
+            return results
 
-        results = []
-        for receiver in self.receivers_for(sender):
-            results.append((receiver, receiver(sender, **kwargs)))
-        return results
+        def spawned_receiver(receiver, sender, **kwargs):
+            log.trace("spawned %r for signal %r, sender: %r",
+                      receiver, self.name, sender)
+            return receiver, eventlet.spawn(receiver, sender, **kwargs).wait()
 
         pile = eventlet.GreenPile(self.pool)
         for receiver in self.receivers_for(sender):
+            log.trace("Spawning for receiver: %s", receiver)
             pile.spawn(spawned_receiver, receiver, sender, **kwargs)
         return pile
 

@@ -13,3 +13,6 @@ __email__        = 'ufs@ufsoft.org'
 __license__      = 'BSD'
 __url__          = 'http://rtp.ufsoft.org/EvNam'
 __description__  = __doc__
+
+__core_script_name__    = 'evafm-core'
+__sources_script_name__ = 'evafm-source'

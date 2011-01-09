@@ -8,15 +8,18 @@
     :license: BSD, see LICENSE for more details.
 """
 
+import os
 import time
+import signal
 import logging
 import eventlet
-from eventlet.green import zmq
+from eventlet.green import zmq, subprocess
 from giblets import implements, Component, ExtensionPoint
+from evafm import __sources_script_name__
 from evafm.common import context
 from evafm.core.database.models import Source
 from evafm.core.interfaces import ICheckerCore, ICoreComponent
-from evafm.core.signals import core_prepared
+from evafm.core.signals import core_daemonized, core_shutdown, core_prepared, source_alive, source_dead
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +62,7 @@ class SourcesHeartbeater(Component):
     def handle_new_heart(self, heart):
         log.debug("Got a new beating heart: %s", heart)
         self.hearts.add(heart)
+        source_alive.send(self, source_id=int(heart))
 
     def handle_heart_failure(self, heart):
         heart_failures = self.failures.get(heart, 1)
@@ -68,6 +72,7 @@ class SourcesHeartbeater(Component):
             self.failures[heart] = heart_failures+1
         else:
             log.debug("Heart %s has aparently died.:(", heart)
+            source_dead.send(self, source_id=int(heart))
             self.hearts.remove(heart)
             del self.failures[heart]
 
@@ -84,7 +89,7 @@ class SourcesHeartbeater(Component):
                     pass
                 else:
                     print zmq.strerror(e.errno)
-            eventlet.sleep(0.01)
+            eventlet.sleep(0.001)
 
     def recv_hearts(self):
         buffer = []
@@ -119,16 +124,101 @@ class SourcesManager(Component):
         self.hearbeater = SourcesHeartbeater(self.compmgr)
 
     def connect_signals(self):
+        core_daemonized.connect(self.__on_core_daemonized)
         core_prepared.connect(self.__on_core_prepared)
+        core_shutdown.connect(self.__on_core_shutdown)
+        source_alive.connect(self.__on_source_alive)
+        source_dead.connect(self.__on_source_dead)
+
+    def __on_core_daemonized(self, core_daemon):
+        self.core_daemon = core_daemon
 
     def __on_core_prepared(self, core):
         self.core = core
         self.db = core.database_manager
-        session = self.db.get_session()
-#        for source in session.query(Source).filter_by(enabled=True).all():
-#            self.sources[source.id] = source.to_dict()
-#            socket = context.socket(zmq.XREQ)
-#            socket.connect("ipc://run/source-%s" % source.id)
-#            self.sources[source.id]['rpc'] = socket
-#        eventlet.spawn(self.ping_sources)
+        eventlet.spawn_after(2, self.__launch_sources)
 
+    def __launch_sources(self):
+        session = self.db.get_session()
+        for source in session.query(Source).filter_by(enabled=True).all():
+            self.sources[source.id] = {}
+            eventlet.spawn_after(0.5, self.__launch_source, source.name, source.id)
+            eventlet.sleep(0.5)
+
+    def __launch_source(self, source_name, source_id):
+        log.info("Launching source \"%s\"", source_name)
+        subprocess_args = [
+            __sources_script_name__,
+            '--working-dir', os.path.abspath(self.core_daemon.working_directory),
+            '--loglevel', self.core_daemon.loglevel,
+            '--logfile', os.path.join(self.core_daemon.working_directory,
+                                      "log/source-%s.log" % source_id),
+            '--pidfile', os.path.join(self.core_daemon.working_directory,
+                                      "run/source-%s.pid" % source_id),
+            '--uid', str(self.core_daemon.uid),
+            '--gid', str(self.core_daemon.gid),
+            '--detach',
+            str(source_id)
+        ]
+        log.trace("Subprocess args: %s", subprocess_args)
+        try:
+            process = subprocess.Popen(
+                subprocess_args, cwd=self.core_daemon.working_directory,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+            process.wait()
+            if process.returncode != 0:
+                raise OSError(process.stdout.read())
+        except OSError, err:
+            log.error("Failed to launch source \"%s\". Error: %s",
+                      source_name, err)
+        else:
+            log.info("Launched source \"%s\"", source_name)
+
+    def __on_source_alive(self, sender, source_id):
+        log.debug("Source id %s is now alive.", source_id)
+
+        pidfile = open(os.path.join(self.core_daemon.working_directory,
+                                    'run/source-%s.pid' % source_id), 'r')
+        pid = pidfile.read()
+        pidfile.close()
+        self.sources[source_id]['pid'] = int(pid)
+
+        session = self.db.get_session()
+        source = session.query(Source).get(source_id)
+        log.info("Source %s is now alive", source.name)
+        socket = context.socket(zmq.REQ)
+        socket.connect("ipc://run/source-%s" % source.id)
+        self.sources[source_id]['socket'] = socket
+        log.debug("Setting source name to %r", source.name)
+        socket.send_pyobj({'method': 'source.set_name', 'args': source.name})
+        socket.recv_pyobj()
+        log.debug("Setting source uri to %r", source.uri)
+        socket.send_pyobj({'method': 'source.set_uri', 'args': source.uri})
+        socket.recv_pyobj()
+        log.debug("Setting source buffer size to %r Mb", source.buffer_size)
+        socket.send_pyobj({'method': 'source.set_buffer_size',
+                           'args': source.buffer_size})
+        socket.recv_pyobj()
+        log.debug("Setting source buffer duration to %ss", source.buffer_duration)
+        socket.send_pyobj({'method': 'source.set_buffer_duration',
+                           'args': source.buffer_duration})
+        socket.recv_pyobj()
+        log.info("Start playing the source")
+        socket.send_pyobj({'method': 'source.start_play'})
+        socket.recv_pyobj()
+        log.trace(self.sources[source_id])
+
+    def __on_source_dead(self, sender, source_id):
+        log.debug("Source id %s is now dead.", source_id)
+        del self.sources[source_id]
+
+    def __on_core_shutdown(self, core):
+        for source_id, source_details in self.sources.iteritems():
+            if 'pid' not in source_details:
+                continue
+            log.debug("Sending terminate signal to source_id %s", source_id)
+            try:
+                os.kill(source_details['pid'], signal.SIGINT)
+            except Exception, err:
+                log.exception(err)

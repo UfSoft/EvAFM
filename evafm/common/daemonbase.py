@@ -40,7 +40,7 @@ class BaseOptionParser(OptionParser):
                         help="The working dir the process should change to. "
                              "Default: %default")
         self.add_option('-l', '--logfile', help="Log file path")
-        self.add_option('-L', '--log-level', default="info", dest="loglevel",
+        self.add_option('-L', '--loglevel', default="info",
                         choices=sorted(log_levels, key=lambda k: log_levels[k]),
                         help="The desired logging level. Default: %default")
 
@@ -78,21 +78,28 @@ class BaseDaemon(object):
             sys.exit(1)
 
         if self.uid and isinstance(self.uid, basestring):
-            import pwd
-            pw = pwd.getpwnam(self.uid)
-            if pw:
-                self.uid = pw.pw_uid
+            try:
+                self.uid = int(self.uid)
+            except:
+                import pwd
+                pw = pwd.getpwnam(self.uid)
+                if pw:
+                    self.uid = pw.pw_uid
         if self.gid and isinstance(self.gid, basestring):
-            import grp
-            gp = grp.getgrnam(self.gid)
-            if gp:
-                self.gid = gp.gr_gid
+            try:
+                self.gid = int(self.gid)
+            except:
+                import grp
+                gp = grp.getgrnam(self.gid)
+                if gp:
+                    self.gid = gp.gr_gid
 
     def check_pid(self):
         if not self.pidfile:
             return
         if os.path.isfile(self.pidfile):
-            print "Pidfile %r exists! Exiting" % self.pidfile
+            print ("Pidfile %r exists! Delete it and re-try. Exiting..." %
+                   self.pidfile)
             sys.exit(1)
 
 
@@ -181,6 +188,7 @@ class BaseDaemon(object):
                                           os.getcwd())
 
     def run_daemon(self):
+        self.check_pid()
         self.setup_logging()
         self.prepare()
         import logging

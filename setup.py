@@ -40,8 +40,8 @@ setup(name=evafm.__package_name__,
       },
       entry_points = """
       [console_scripts]
-      evafm-core   = evafm.core.daemon:start_daemon
-      evafm-source = evafm.sources.daemon:start_daemon
+      %s = evafm.core.daemon:start_daemon
+      %s = evafm.sources.daemon:start_daemon
 
       [distutils.commands]
       compile = babel.messages.frontend:compile_catalog
@@ -54,7 +54,7 @@ setup(name=evafm.__package_name__,
 
       [evafm.core.checkers]
       silence = evafm.checkers.silence.core
-      """,
+      """ % (evafm.__core_script_name__, evafm.__sources_script_name__),
       classifiers=[
           'Development Status :: 5 - Alpha',
           'Environment :: Web Environment',

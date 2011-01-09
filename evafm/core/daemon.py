@@ -8,11 +8,15 @@
     :license: BSD, see LICENSE for more details.
 """
 
-from eventlet.hubs import use_hub
+from eventlet.hubs import use_hub, get_hub
+import eventlet
 use_hub('zeromq')
-from eventlet import debug
-debug.hub_blocking_detection(True, 0.5)
+from eventlet.green import time
+#from eventlet import debug
+#debug.hub_blocking_detection(True, 0.5)
 
+import os
+import signal
 import logging
 import giblets.search
 from giblets import ComponentManager
@@ -49,18 +53,25 @@ class Daemon(BaseDaemon):
     def run(self):
         from evafm.core.signals import core_daemonized
         logging.getLogger(__name__).info("Core Daemon Running")
+        self.sources_alive = {}
         core_daemonized.send(self)
         self.core.run()
 
     def exit(self):
+        self.exited = False
         from evafm.core.signals import core_undaemonized, core_shutdown
         logging.getLogger(__name__).info("Core Daemon Exiting...")
-        core_undaemonized.send(self)
         def on_core_shutdown(sender):
             logging.getLogger(__name__).info("Core Daemon Quitting...")
             core_undaemonized.send(self)
+            self.exited = True
         core_shutdown.connect(on_core_shutdown)
+        logging.getLogger(__name__).debug("Shutdown core")
         self.core.shutdown()
+        eventlet.spawn(get_hub().abort, True)
+        while not self.exited:
+            # Waiting for everyhting to finish up...
+            pass
 
 def start_daemon():
     return Daemon.cli()

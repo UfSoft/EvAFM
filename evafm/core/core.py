@@ -15,7 +15,7 @@ from giblets import Component, ExtensionPoint
 from evafm.core.interfaces import ICoreComponent
 from evafm.core.database import DatabaseManager
 from evafm.core.sources import SourcesManager
-from evafm.core.signals import core_prepared
+from evafm.core.signals import core_prepared, core_shutdown
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +37,9 @@ class Core(Component):
         self.running = True
         core_prepared.send(self)
         while self.running:
-#            log.debug("Core processing")
             eventlet.sleep(0.001)
-        core_shutdown.send(self)
 
     def shutdown(self):
+        log.debug("Shutting down...")
         self.running = False
+        core_shutdown.send(self, _waitall=True)

@@ -29,7 +29,17 @@ This signal is emmited when the core is ready to start processing.
 core_shutdown = signal("core-shutdown", """
 This signal is emmited when the core has shutdown.
 """)
+
 core_undaemonized = signal("core-undaemonized", """\
 This signal is emmited when core has stopped.
 """)
 
+source_alive = signal("source-alive", """\
+This signal is emmited when a sources heart starts beating and the sources
+manager knows about it.
+""")
+
+source_dead = signal("source-dead", """\
+This signal is emmited when a sources heart starts beating and the sources
+manager knows about it.
+""")

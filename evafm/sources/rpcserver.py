@@ -81,13 +81,13 @@ class RPCServer(rpcserver.RPCServer):
             result = self.rpc_methods[method](*args, **kwargs)
             success = True
             if result:
-                return dict(result=result, sucess=success)
-            return dict(sucess=success)
+                return dict(result=result, success=success)
+            return dict(success=success)
         except KeyError:
             failure = "RPCMethod \"%s\" unknown" % method
             log.error(failure)
             success = False
-            return dict(sucess=success, failure=failure)
+            return dict(success=success, failure=failure)
         except Exception, err:
             failure = ("Failed to call method \"%s\" with args %s and kwargs %s"
                        % (method, args, kwargs))
@@ -96,5 +96,5 @@ class RPCServer(rpcserver.RPCServer):
             success = False
             etype, evalue, etb = sys.exc_info()
             tb = traceback.format_exception(etype, evalue, etb)
-            return dict(sucess=success, failure=failure, traceback=tb)
+            return dict(success=success, failure=failure, traceback=tb)
 

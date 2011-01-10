@@ -9,6 +9,7 @@
 """
 
 import gst
+from unicodedata import normalize
 from giblets import Attribute, Component, ExtensionInterface
 
 class IGstComponent(ExtensionInterface):
@@ -95,7 +96,6 @@ class CheckerBase(Component):
 
 class SourceBase(Component):
 
-    safe_name = None
     used_element_names = []
     gst_setup_complete = False
     buffer_percent = 0
@@ -115,8 +115,16 @@ class SourceBase(Component):
         self.used_element_names.append(element_name)
         return gst.element_factory_make(gst_element_name, element_name)
 
+    @property
+    def safe_name(self):
+        if not self.name:
+            return
+        return '_'.join(
+            normalize('NFKD', self.name).encode('ASCII', 'ignore').split(' ')
+        )
+
     def __repr__(self):
         return self.__unicode__().encode('utf-8')
 
     def __unicode__(self):
-        return u'<Source id="%s" name="%s">' % (self.id, self.name.decode('utf8'))
+        return u'<Source id="%s" name="%s">' % (self.id, self.name)

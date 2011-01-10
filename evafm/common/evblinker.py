@@ -13,6 +13,7 @@ import logging
 
 import blinker.base
 from evafm.common import context
+context.green = True
 
 log = logging.getLogger(__name__)
 

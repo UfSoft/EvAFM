@@ -10,10 +10,10 @@
 
 from eventlet.hubs import use_hub, get_hub
 import eventlet
+import time
 use_hub('zeromq')
-from eventlet.green import time
-#from eventlet import debug
-#debug.hub_blocking_detection(True, 0.5)
+from eventlet import debug
+debug.hub_blocking_detection(True, 0.5)
 
 import os
 import signal
@@ -72,6 +72,7 @@ class Daemon(BaseDaemon):
         while not self.exited:
             # Waiting for everyhting to finish up...
             pass
+        time.sleep(0.4)
 
 def start_daemon():
     return Daemon.cli()

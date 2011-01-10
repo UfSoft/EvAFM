@@ -211,19 +211,34 @@ class BaseDaemon(object):
         pass
 
     def _exit(self, ssignal, frame):
+        import logging
         if not self.__exiting:
-            import logging
+            def too_long(sig, frm):
+                logging.getLogger(__name__).info(
+                    "Taking too long to exit(>5 secs). Commit suicide!!!"
+                )
+                self.remove_pid()
+                logging.shutdown()
+                try:
+                    os.kill(self.__pid, signal.SIGKILL)
+                except OSError, err:
+                    logging.getLogger(__name__).exception(
+                        "Failed to commit suicide: %s", err
+                    )
+            # Setup an alarm signal so that if taking too long, commit suicide
+            signal.signal(signal.SIGALRM, too_long)
+            signal.alarm(5) # We have 5 secs to exit properly
             logging.getLogger(__name__).info("Exiting...")
             self.__exiting = True
             # Ignore any further signaling
             signal.signal(ssignal, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
             signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-            self.remove_pid()
             self.exit()
+
             logging.getLogger(__name__).info("Exited!!!")
             logging.shutdown()
+            self.remove_pid()
             os._exit(1)
 
     @classmethod

@@ -40,9 +40,14 @@ class SourcesHeartbeater(Component):
         self.pub = context.socket(zmq.PUB)
         self.pub.bind("ipc://run/sources-heartbeat-pub")
         self.xrep = context.socket(zmq.XREP)
-        self.xrep.bind("ipc://run/sources-heartbeat-req")
-        eventlet.spawn_after(1, self.check_xreq_state)
-        eventlet.spawn_after(1, self.beat)
+        self.xrep.bind("ipc://run/sources-heartbeat-replier")
+        eventlet.spawn_after(5, self.check_xreq_state)
+        eventlet.spawn_after(6, self.beat)
+        eventlet.spawn_after(15, self.log_beating_hearts)
+
+    def log_beating_hearts(self):
+        log.trace("%i beating hearts: %s", len(self.hearts), self.hearts)
+        eventlet.spawn_after(10, self.log_beating_hearts)
 
     def beat(self):
         log.trace("Heartbeater beating...")
@@ -55,7 +60,6 @@ class SourcesHeartbeater(Component):
         map(self.handle_new_heart, newhearts)
         map(self.handle_heart_failure, heartfailures)
         self.responses = set()
-        log.trace("%i beating hearts: %s", len(self.hearts), self.hearts)
         eventlet.spawn_after(1, self.beat)
         eventlet.spawn_n(self.pub.send, str(self.lifetime))
 
@@ -68,7 +72,7 @@ class SourcesHeartbeater(Component):
         heart_failures = self.failures.get(heart, 1)
         log.debug("Heart %s failed to respond. Attempt %s :(",
                   heart, heart_failures)
-        if heart_failures <= 5:
+        if heart_failures <= 10:
             self.failures[heart] = heart_failures+1
         else:
             log.debug("Heart %s has aparently died.:(", heart)
@@ -101,8 +105,7 @@ class SourcesHeartbeater(Component):
                 # Message is now complete
                 # break to process it!
                 break
-        eventlet.spawn_after(0.01, self.handle_pong, buffer)
-        self.buffer = []
+        eventlet.spawn_after(0.001, self.handle_pong, buffer)
 
     def handle_pong(self, msg):
         "if heart is beating"
@@ -142,8 +145,11 @@ class SourcesManager(Component):
         session = self.db.get_session()
         for source in session.query(Source).filter_by(enabled=True).all():
             self.sources[source.id] = {}
-            eventlet.spawn_after(0.5, self.__launch_source, source.name, source.id)
-            eventlet.sleep(0.5)
+            eventlet.spawn_after(
+                source.id*0.2, self.__launch_source, source.name, source.id
+            )
+#            if source.id == 2:
+#                break
 
     def __launch_source(self, source_name, source_id):
         log.info("Launching source \"%s\"", source_name)
@@ -178,8 +184,10 @@ class SourcesManager(Component):
     def __on_source_alive(self, sender, source_id):
         log.debug("Source id %s is now alive.", source_id)
 
-        pidfile = open(os.path.join(self.core_daemon.working_directory,
-                                    'run/source-%s.pid' % source_id), 'r')
+        pidfile_path = os.path.join(
+            self.core_daemon.working_directory, 'run/source-%s.pid' % source_id
+        )
+        pidfile = open(pidfile_path, 'r')
         pid = pidfile.read()
         pidfile.close()
         self.sources[source_id]['pid'] = int(pid)
@@ -190,24 +198,26 @@ class SourcesManager(Component):
         socket = context.socket(zmq.REQ)
         socket.connect("ipc://run/source-%s" % source.id)
         self.sources[source_id]['socket'] = socket
-        log.debug("Setting source name to %r", source.name)
+        log.debug("Setting source name to \"%s\"", source.name)
         socket.send_pyobj({'method': 'source.set_name', 'args': source.name})
         socket.recv_pyobj()
-        log.debug("Setting source uri to %r", source.uri)
+        log.debug("Setting source \"%s\" uri to %r", source.name, source.uri)
         socket.send_pyobj({'method': 'source.set_uri', 'args': source.uri})
         socket.recv_pyobj()
-        log.debug("Setting source buffer size to %r Mb", source.buffer_size)
+        log.debug("Setting source \"%s\" buffer size to %r Mb",
+                  source.name, source.buffer_size)
         socket.send_pyobj({'method': 'source.set_buffer_size',
                            'args': source.buffer_size})
         socket.recv_pyobj()
-        log.debug("Setting source buffer duration to %ss", source.buffer_duration)
+        log.debug("Setting source \"%s\" buffer duration to %ss",
+                  source.name, source.buffer_duration)
         socket.send_pyobj({'method': 'source.set_buffer_duration',
                            'args': source.buffer_duration})
         socket.recv_pyobj()
-        log.info("Start playing the source")
+        log.info("Start playing the source \"%s\"", source.name)
         socket.send_pyobj({'method': 'source.start_play'})
         socket.recv_pyobj()
-        log.trace(self.sources[source_id])
+        eventlet.sleep(0.1)
 
     def __on_source_dead(self, sender, source_id):
         log.debug("Source id %s is now dead.", source_id)
@@ -215,10 +225,14 @@ class SourcesManager(Component):
 
     def __on_core_shutdown(self, core):
         for source_id, source_details in self.sources.iteritems():
-            if 'pid' not in source_details:
+            pid = source_details.get('pid', None)
+            if not pid:
                 continue
-            log.debug("Sending terminate signal to source_id %s", source_id)
+            log.debug("Sending terminate signal to source_id %s with pid %s",
+                      source_id, pid)
             try:
-                os.kill(source_details['pid'], signal.SIGINT)
+                os.kill(pid, signal.SIGINT)
+            except OSError:
+                continue
             except Exception, err:
                 log.exception(err)

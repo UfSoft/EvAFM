@@ -13,9 +13,7 @@ import gobject
 import gst
 import zmq
 from zmq import devices
-
 from giblets import implements, ExtensionPoint
-
 from evafm.common.interfaces import IRPCMethodProvider
 from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN, AUTH_LEVEL_READONLY
 from evafm.sources.interfaces import SourceBase, ISource, IChecker
@@ -34,7 +32,7 @@ class Source(SourceBase):
         self.heart = devices.ThreadDevice(zmq.FORWARDER, zmq.SUB, zmq.XREQ)
         self.heart.setsockopt_in(zmq.SUBSCRIBE, "")
         self.heart.connect_in("ipc://run/sources-heartbeat-pub")
-        self.heart.connect_out("ipc://run/sources-heartbeat-req")
+        self.heart.connect_out("ipc://run/sources-heartbeat-replier")
         self.heart.setsockopt_out(zmq.IDENTITY, self.id)
         self.heart.start()
         log.debug("Heart Setup!")
@@ -131,11 +129,11 @@ class Source(SourceBase):
             self.queue = self.gst_element_factory_make('queue')
             self.pipeline.add(self.queue)
 
-#            self.sink = self.gst_element_factory_make('fakesink')
-#            self.sink.set_property('sync', True)
-
-            self.sink = self.gst_element_factory_make('alsasink')
+            self.sink = self.gst_element_factory_make('fakesink')
             self.sink.set_property('sync', True)
+
+#            self.sink = self.gst_element_factory_make('alsasink')
+#            self.sink.set_property('sync', True)
 
             self.pipeline.add(self.sink)
 
@@ -290,7 +288,6 @@ class Source(SourceBase):
     @export(AUTH_LEVEL_ADMIN)
     def set_name(self, name):
         self.name = name
-        self.safe_name = '_'.join(self.name.split(' '))
 
     @export(AUTH_LEVEL_READONLY)
     def get_name(self):

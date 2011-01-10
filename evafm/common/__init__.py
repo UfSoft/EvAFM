@@ -1,15 +1,26 @@
-import zmq
 
-# ZMQ Context is instantiated here to be reusable. OpenPGM only allows one
-# context per process.
+# ZMQ Context is here to be reusable. OpenPGM only allows one per process.
+# It's late instantiated!
+
 class Context(object):
+    __slots__ = ('_context', 'green')
+
     def __init__(self):
         self._context = None
+        self.green = False
 
     def __getattribute__(self, name):
         _context = object.__getattribute__(self, '_context')
         if not _context:
-            self._context = _context = zmq.Context(10)
+            import logging
+            if object.__getattribute__(self, 'green'):
+                logging.getLogger(__name__).debug("Importing Green version of ZMQ")
+                from eventlet.green import zmq
+            else:
+                logging.getLogger(__name__).debug("Importing Regular version of ZMQ")
+                import zmq
+            self._context = _context = zmq.Context(100)
         return getattr(_context, name)
 
 context = Context()
+

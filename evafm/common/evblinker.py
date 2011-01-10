@@ -60,18 +60,25 @@ class NamedSignal(blinker.base.NamedSignal):
         if waitall:
             results = []
             for receiver in self.receivers_for(sender):
-                results.append((receiver, receiver(sender, **kwargs)))
+                try:
+                    results.append((receiver, receiver(sender, **kwargs)))
+                except Exception, err:
+                    log.exception(err)
             return results
 
-        def spawned_receiver(receiver, sender, **kwargs):
-            log.trace("spawned %r for signal %r, sender: %r",
-                      receiver, self.name, sender)
-            return receiver, eventlet.spawn(receiver, sender, **kwargs).wait()
+        def spawned_receiver(receiver, sender, kwargs):
+            log.trace("spawned %r for signal %r, sender: %r  kwargs: %r",
+                      receiver, self.name, sender, kwargs)
+            try:
+                return receiver, eventlet.spawn(receiver, sender, **kwargs)
+            except Exception, err:
+                log.error("Failed to run spawned function")
+                log.exception(err)
 
         pile = eventlet.GreenPile(self.pool)
         for receiver in self.receivers_for(sender):
             log.trace("Spawning for receiver: %s", receiver)
-            pile.spawn(spawned_receiver, receiver, sender, **kwargs)
+            pile.spawn(spawned_receiver, receiver, sender, kwargs)
         return pile
 
 

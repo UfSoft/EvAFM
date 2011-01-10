@@ -9,7 +9,7 @@
 """
 
 import logging
-from giblets import Component, ExtensionInterface
+from giblets import Attribute, Component, ExtensionInterface
 
 log = logging.getLogger(__name__)
 
@@ -34,4 +34,5 @@ class IRPCServer(ExtensionInterface):
         """
 
 class IRPCMethodProvider(ExtensionInterface):
-    pass
+    rpc_methods_basename = Attribute("Basename to use when registering the "
+                                     "rpc methods with the server.")

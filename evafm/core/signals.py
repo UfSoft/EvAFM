@@ -39,6 +39,11 @@ This signal is emmited when a sources heart starts beating and the sources
 manager knows about it.
 """)
 
+source_socket_available = signal("source-socket-available", """\
+This signal is emmited when a source is alive an we've established a zmq
+connection to it's rpc socket.
+""")
+
 source_dead = signal("source-dead", """\
 This signal is emmited when a sources heart starts beating and the sources
 manager knows about it.

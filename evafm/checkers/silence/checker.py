@@ -11,36 +11,38 @@
 import gst
 import logging
 from giblets import implements
+from evafm.common.interfaces import IRPCMethodProvider
+from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN
 from evafm.common.zmqblinker import zmqsignal as signal
 from evafm.sources.interfaces import CheckerBase, IChecker
 import gobject
 
 log = logging.getLogger(__name__)
 
-class TimeoutFunction(object):
-    def __init__(self, timeout, func, *args, **kwargs):
-        self.timeout = timeout
-        self.func = func
-        self.args = args
-        self.kwargs = kwargs
-
-    def start(self):
-        self.id = gobject.timeout_add_seconds(self.timeout, self.func,
-                                              *self.args, **self.kwargs)
-
-    def restart(self, timeout=None):
-        if timeout:
-            self.timeout = timeout
-        if self.id:
-            self.cancel()
-        self.start()
-
-    def cancel(self):
-        gobject.source_remove(self.id)
-        self.id = None
+#class LoopingFunction(object):
+#    def __init__(self, timeout, func, *args, **kwargs):
+#        self.timeout = timeout
+#        self.func = func
+#        self.args = args
+#        self.kwargs = kwargs
+#
+#    def start(self):
+#        self.id = gobject.timeout_add_seconds(self.timeout, self.func,
+#                                              *self.args, **self.kwargs)
+#
+#    def restart(self, timeout=None):
+#        if timeout:
+#            self.timeout = timeout
+#        if self.id:
+#            self.cancel()
+#        self.start()
+#
+#    def cancel(self):
+#        gobject.source_remove(self.id)
+#        self.id = None
 
 class SilenceChecker(CheckerBase):
-    implements(IChecker)
+    implements(IChecker, IRPCMethodProvider)
 
     def prepare(self):
         if self.gst_setup_complete:
@@ -91,3 +93,27 @@ class SilenceChecker(CheckerBase):
                     self.source.name, rms_left, rms_right)
 
         return True
+
+    @export(AUTH_LEVEL_ADMIN)
+    def set_min_tolerance(self, min_tolerance):
+        self.min_tolerance = min_tolerance
+
+    @export(AUTH_LEVEL_ADMIN)
+    def get_min_tolerance(self):
+        return self.min_tolerance
+
+    @export(AUTH_LEVEL_ADMIN)
+    def set_max_tolerance(self, max_tolerance):
+        self.max_tolerance = max_tolerance
+
+    @export(AUTH_LEVEL_ADMIN)
+    def get_max_tolerance(self):
+        return self.maxn_tolerance
+
+    @export(AUTH_LEVEL_ADMIN)
+    def set_silence_level(self, silence_level):
+        self.silence_level = silence_level
+
+    @export(AUTH_LEVEL_ADMIN)
+    def get_silence_level(self):
+        return self.silence_level

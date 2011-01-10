@@ -19,7 +19,9 @@ from evafm import __sources_script_name__
 from evafm.common import context
 from evafm.core.database.models import Source
 from evafm.core.interfaces import ICheckerCore, ICoreComponent
-from evafm.core.signals import core_daemonized, core_shutdown, core_prepared, source_alive, source_dead
+from evafm.core.signals import (core_daemonized, core_shutdown, core_prepared,
+                                source_alive, source_dead,
+                                source_socket_available)
 
 log = logging.getLogger(__name__)
 
@@ -125,6 +127,9 @@ class SourcesManager(Component):
         self.sources = {}
         self.rpc = context.socket(zmq.REQ)
         self.hearbeater = SourcesHeartbeater(self.compmgr)
+        for component in self.checkers:
+            component.activate()
+            component.connect_signals()
 
     def connect_signals(self):
         core_daemonized.connect(self.__on_core_daemonized)
@@ -217,6 +222,7 @@ class SourcesManager(Component):
         log.info("Start playing the source \"%s\"", source.name)
         socket.send_pyobj({'method': 'source.start_play'})
         socket.recv_pyobj()
+        source_socket_available.send(self, source_id=source.id, socket=socket)
         eventlet.sleep(0.1)
 
     def __on_source_dead(self, sender, source_id):

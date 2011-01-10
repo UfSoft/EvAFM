@@ -64,7 +64,8 @@ class RPCServer(Component):
         self.connect_signals()
         self.register_rpc_object(self, name="rpcserver")
         for provider in self.rpc_providers:
-            self.register_rpc_object(provider)
+            name = getattr(provider, 'rpc_methods_basename', None)
+            self.register_rpc_object(provider, name=name)
 
     def connect_signals(self):
         raise NotImplementedError

@@ -27,6 +27,16 @@ class Source(SourceBase):
 
     id = uri = buffer_size = name = buffer_duration = None
 
+    def activate(self):
+        for checker in self.checkers:
+            log.debug("Activating checker %s", checker.get_name())
+            checker.activate()
+
+    def connect_signals(self):
+        for checker in self.checkers:
+            log.debug("Connecting signals for checker %s", checker.get_name())
+            checker.connect_signals()
+
     def setup_heart(self):
         log.debug("Setting up Heart!")
         self.heart = devices.ThreadDevice(zmq.FORWARDER, zmq.SUB, zmq.XREQ)

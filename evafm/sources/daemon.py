@@ -37,6 +37,8 @@ class Daemon(BaseDaemon):
         # Late searching of checkers in order to have logging properly setup
         giblets.search.find_plugins_by_entry_point("evafm.sources.checkers")
         self.source = Source(self.mgr)
+        self.source.activate()
+        self.source.connect_signals()
         self.source.set_id(self.source_id)
         self.rpc_server = RPCServer(self.mgr)
         gobject.timeout_add_seconds(

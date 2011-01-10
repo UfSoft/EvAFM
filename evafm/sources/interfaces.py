@@ -11,11 +11,21 @@
 import gst
 from unicodedata import normalize
 from giblets import Attribute, Component, ExtensionInterface
+from evafm.common.interfaces import BaseComponent
+
 
 class IGstComponent(ExtensionInterface):
     gst_setup_complete = Attribute("Boolean attribute telling us if the gst "
                                    "related stuff has been setup on the "
                                    "component")
+
+    def activate():
+        """
+        """
+
+    def connect_signals():
+        """
+        """
 
 class ISource(IGstComponent):
 
@@ -61,7 +71,7 @@ class IChecker(IGstComponent):
         """reverts the interface"""
 
 
-class CheckerBase(Component):
+class CheckerBase(BaseComponent, Component):
     gst_setup_complete = False
 
 
@@ -69,8 +79,9 @@ class CheckerBase(Component):
         return self.__unicode__().encode('utf-8')
 
     def __unicode__(self):
-        return u'<%s source_name="%s">' % (self.get_name(),
-                                           self.get_source().name.decode('utf8'))
+        return u'<%s source_name="%s">' % (
+            self.get_name(), self.get_source().name.decode('utf8')
+        )
 
     def get_name(self):
         return self.__class__.__name__
@@ -94,7 +105,7 @@ class CheckerBase(Component):
     def revert(self, sender=None):
         raise NotImplementedError
 
-class SourceBase(Component):
+class SourceBase(BaseComponent, Component):
 
     used_element_names = []
     gst_setup_complete = False

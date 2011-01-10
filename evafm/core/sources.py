@@ -17,15 +17,16 @@ from eventlet.green import zmq, subprocess
 from giblets import implements, Component, ExtensionPoint
 from evafm import __sources_script_name__
 from evafm.common import context
+from evafm.common.interfaces import BaseComponent
 from evafm.core.database.models import Source
 from evafm.core.interfaces import ICheckerCore, ICoreComponent
 from evafm.core.signals import (core_daemonized, core_shutdown, core_prepared,
-                                source_alive, source_dead,
-                                source_socket_available)
+    source_alive, source_dead, source_socket_available
+)
 
 log = logging.getLogger(__name__)
 
-class SourcesHeartbeater(Component):
+class SourcesHeartbeater(BaseComponent, Component):
     implements(ICoreComponent)
 
     def activate(self):
@@ -119,7 +120,7 @@ class SourcesHeartbeater(Component):
         else:
             log.warn("got bad heartbeat (possibly old?): %s", heart)
 
-class SourcesManager(Component):
+class SourcesManager(BaseComponent, Component):
     implements(ICoreComponent)
     checkers = ExtensionPoint(ICheckerCore)
 
@@ -151,10 +152,8 @@ class SourcesManager(Component):
         for source in session.query(Source).filter_by(enabled=True).all():
             self.sources[source.id] = {}
             eventlet.spawn_after(
-                source.id*0.2, self.__launch_source, source.name, source.id
+                source.id*0.3, self.__launch_source, source.name, source.id
             )
-#            if source.id == 2:
-#                break
 
     def __launch_source(self, source_name, source_id):
         log.info("Launching source \"%s\"", source_name)

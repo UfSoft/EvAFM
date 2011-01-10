@@ -18,12 +18,12 @@ context.green = True
 from giblets import implements, Component
 from migrate.versioning.api import upgrade
 from migrate.versioning.repository import Repository
+from evafm.common.interfaces import BaseComponent
 from evafm.core.database.models import Model, db
 from evafm.core.interfaces import ICheckerCore, IDatabaseComponent
 from evafm.checkers.silence import upgrades
 from evafm.core.signals import (source_alive, source_dead,
-                                source_socket_available, sources_manager_active,
-                                database_upgraded)
+                                source_socket_available, database_upgraded)
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class SilenceCheckerProperties(Model):
         self.max_tolerance = max_tolerance
         self.silence_level = silence_level
 
-class SilenceCheckerCore(Component):
+class SilenceCheckerCore(BaseComponent, Component):
     implements(IDatabaseComponent, ICheckerCore)
 
 

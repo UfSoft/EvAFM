@@ -93,6 +93,15 @@ class SilenceCheckerProperties(Model):
         self.max_tolerance = max_tolerance
         self.silence_level = silence_level
 
+class MessageLevel(Model):
+    __tablename__   = 'message_levels'
+
+    id              = db.Column(db.Integer, primary_key=True)
+    level           = db.Column(db.String)
+
+    def __init__(self, level):
+        self.level = level
+
 class MessageKind(Model):
     __tablename__   = 'message_kinds'
 
@@ -108,12 +117,11 @@ class Message(Model):
     id              = db.Column(db.Integer, primary_key=True)
     stamp           = db.Column(db.DateTime, default=datetime.utcnow)
     source          = db.Column(db.ForeignKey('sources.id'))
-    kind            = db.Column(db.ForeignKey('message_kinds.id'))
+    kind_id         = db.Column(db.ForeignKey('message_kinds.id'))
+    level_id        = db.Column(db.ForeignKey('message_levels.id'))
     message         = db.Column(db.String)
 
-    def __init__(self, source_id, kind_id, message):
-        self.source = source_id
-        self.kind = kind_id
+    def __init__(self, message):
         self.message = message
 
 
@@ -130,10 +138,18 @@ def upgrade(migrate_engine):
     session.add(Role('admin', "EvAFM Administration Permission"))
     session.commit()
 
+    log.info("Add \"authenticated\" role")
+    session.add(Role('authenticated', "EvAFM Administration Permission"))
+    session.commit()
+
+    log.info("Add \"view_only\" role")
+    session.add(Role('authenticated', "EvAFM Administration Permission"))
+    session.commit()
+
     # Add Message Kinds
-    log.info("Add \"message kinds\" role")
-    for kind in ("ERROR", "WARNING", "OK"):
-        session.add(MessageKind(kind))
+    log.info("Add message levels")
+    for level in ("OK", "WARNING", "ERROR"):
+        session.add(MessageLevel(level))
     session.commit()
 
     # Add default sources

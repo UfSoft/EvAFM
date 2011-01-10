@@ -13,6 +13,15 @@ from giblets import Attribute, Component, ExtensionInterface
 
 log = logging.getLogger(__name__)
 
+
+class BaseComponent(object):
+    def activate(self):
+        raise NotImplementedError
+
+    def connect_signals(self):
+        raise NotImplementedError
+
+
 class IRPCServer(ExtensionInterface):
 
     def connect_signals():

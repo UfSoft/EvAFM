@@ -11,38 +11,21 @@
 import gst
 import logging
 from giblets import implements
-from evafm.common.interfaces import IRPCMethodProvider
+from evafm.common.interfaces import IRPCMethodProvider, BaseComponent
 from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN
 from evafm.common.zmqblinker import zmqsignal as signal
 from evafm.sources.interfaces import CheckerBase, IChecker
-import gobject
 
 log = logging.getLogger(__name__)
 
-#class LoopingFunction(object):
-#    def __init__(self, timeout, func, *args, **kwargs):
-#        self.timeout = timeout
-#        self.func = func
-#        self.args = args
-#        self.kwargs = kwargs
-#
-#    def start(self):
-#        self.id = gobject.timeout_add_seconds(self.timeout, self.func,
-#                                              *self.args, **self.kwargs)
-#
-#    def restart(self, timeout=None):
-#        if timeout:
-#            self.timeout = timeout
-#        if self.id:
-#            self.cancel()
-#        self.start()
-#
-#    def cancel(self):
-#        gobject.source_remove(self.id)
-#        self.id = None
-
-class SilenceChecker(CheckerBase):
+class SilenceChecker(BaseComponent, CheckerBase):
     implements(IChecker, IRPCMethodProvider)
+
+    def activate(self):
+        pass
+
+    def connect_signals(self):
+        pass
 
     def prepare(self):
         if self.gst_setup_complete:

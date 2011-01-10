@@ -205,6 +205,14 @@ class Source(Model):
 #            'buffer_duration': self.buffer_duration
 #        }
 
+class MessageLevel(Model):
+    __tablename__   = 'message_levels'
+
+    id              = db.Column(db.Integer, primary_key=True)
+    level           = db.Column(db.String)
+
+    def __init__(self, level):
+        self.level = level
 
 class MessageKind(Model):
     __tablename__   = 'message_kinds'
@@ -222,10 +230,9 @@ class Message(Model):
     id              = db.Column(db.Integer, primary_key=True)
     stamp           = db.Column(db.DateTime, default=datetime.utcnow)
     source          = db.Column(db.ForeignKey('sources.id'))
-    kind            = db.Column(db.ForeignKey('message_kinds.id'))
+    kind_id         = db.Column(db.ForeignKey('message_kinds.id'))
+    level_id        = db.Column(db.ForeignKey('message_levels.id'))
     message         = db.Column(db.String)
 
-    def __init__(self, source_id, kind_id, message):
-        self.source = source_id
-        self.kind = kind_id
+    def __init__(self, message):
         self.message = message

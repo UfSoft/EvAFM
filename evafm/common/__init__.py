@@ -22,5 +22,10 @@ class Context(object):
             self._context = _context = zmq.Context(100)
         return getattr(_context, name)
 
+# If the green(eventlet) version of ZMQ is to be used, before using the
+# context do:
+#   context.green = True
+#
+# This way zmq won't block eventlet
 context = Context()
 

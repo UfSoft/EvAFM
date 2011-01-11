@@ -18,7 +18,7 @@ from giblets import implements, Component, ExtensionPoint
 from evafm import __sources_script_name__
 from evafm.common import context
 from evafm.common.interfaces import BaseComponent
-from evafm.core.database.models import Source
+from evafm.core.models import Source
 from evafm.core.interfaces import ICheckerCore, ICoreComponent
 from evafm.core.signals import (core_daemonized, core_shutdown, core_prepared,
     source_alive, source_dead, source_socket_available

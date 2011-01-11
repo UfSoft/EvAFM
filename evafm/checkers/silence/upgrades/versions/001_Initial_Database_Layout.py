@@ -7,7 +7,7 @@ Created on 23 Aug 2010
 import logging
 from sqlalchemy.orm import create_session
 from sqlalchemy.ext.declarative import declarative_base
-from evafm.core.database.models import db
+from evafm.database.models import db
 
 Model = declarative_base(name='Model')
 metadata = Model.metadata

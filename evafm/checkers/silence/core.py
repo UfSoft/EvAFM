@@ -9,22 +9,20 @@
 """
 
 import logging
-import eventlet
-from os import path
-
 from eventlet.green import zmq
 from evafm.common import context
 context.green = True
 
 from giblets import implements, Component
-from migrate.versioning.api import upgrade
-from migrate.versioning.repository import Repository
 from evafm.common.interfaces import BaseComponent
-from evafm.core.database.models import Model, db
-from evafm.core.interfaces import ICheckerCore, IDatabaseComponent
+from evafm.database.interfaces import (IDatabaseRelationsProvider,
+                                       IDatabaseUpgradeParticipant)
+from evafm.database.models import Model, db
+from evafm.database.signals import database_upgraded
+from evafm.core.interfaces import ICheckerCore
 from evafm.checkers.silence import upgrades
 from evafm.core.signals import (source_alive, source_dead,
-                                source_socket_available, database_upgraded)
+                                source_socket_available)
 
 log = logging.getLogger(__name__)
 
@@ -41,33 +39,18 @@ class SilenceCheckerProperties(Model):
         self.max_tolerance = max_tolerance
         self.silence_level = silence_level
 
+
 class SilenceCheckerCore(BaseComponent, Component):
-    implements(IDatabaseComponent, ICheckerCore)
+    implements(IDatabaseUpgradeParticipant, IDatabaseRelationsProvider,
+               ICheckerCore)
 
+    # IDatabaseUpgradeParticipant attributes
+    repository_id   = "Silence Checker Schema Version Control"
+    repository_path = upgrades.__path__[0]
 
-    # IDatabase Methods
-    def upgrade_database(self, engine, session, SchemaVersion):
-        repository = Repository(upgrades.__path__[0])
-        if not session.query(SchemaVersion).filter_by(
-            repository_id="Silence Checker Schema Version Control").first():
-            session.add(SchemaVersion(
-                "Silence Checker Schema Version Control",
-                path.abspath(path.expanduser(repository.path)), 0)
-            )
-            session.commit()
-
-        schema_version = session.query(SchemaVersion).filter_by(
-            repository_id="Silence Checker Schema Version Control").first()
-
-        if schema_version.version < repository.latest:
-            log.warn("Upgrading database (from -> to...)")
-            eventlet.spawn(upgrade, engine, repository)
-            log.warn("Upgrade complete")
-        else:
-            log.debug("No database upgrade required")
-
+    # IDatabaseRelationsProvider method
     def setup_relations(self):
-        from evafm.core.database.models import Source
+        from evafm.core.models import Source
         Source.silence_checker = db.relation(
             "SilenceCheckerProperties", backref="source", uselist=False,
             lazy=False, cascade="all, delete, delete-orphan"
@@ -94,7 +77,7 @@ class SilenceCheckerCore(BaseComponent, Component):
 
     def __on_source_socket_available(self, sender, source_id, socket):
         self.sources[source_id]['socket'] = socket
-        from evafm.core.database.models import Source
+        from evafm.core.models import Source
         source = self.db.get_session().query(Source).get(source_id)
         log.debug("Setting source's \"%s\" SilenceChecker max tolerance to %s",
                   source.name, source.silence_checker.max_tolerance)

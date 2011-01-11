@@ -10,21 +10,30 @@
 
 import logging
 import eventlet
-import eventlet.debug
-from giblets import Component, ExtensionPoint
+from giblets import implements, Component, ExtensionPoint
+from evafm.core import upgrades
 from evafm.core.interfaces import ICoreComponent
-from evafm.core.database import DatabaseManager
+from evafm.database import DatabaseManager
+from evafm.database.interfaces import IDatabaseUpgradeParticipant
 from evafm.core.sources import SourcesManager
 from evafm.core.signals import core_prepared, core_shutdown
 
 log = logging.getLogger(__name__)
 
 class Core(Component):
+    implements(IDatabaseUpgradeParticipant)
+
+    # IDatabaseUpgradeParticipant attributes
+    repository_id   = "EvAFM Core Schema Version Control"
+    repository_path = upgrades.__path__[0]
+
     components = ExtensionPoint(ICoreComponent)
 
     def activate(self):
         # Register components into ComponentManager
         self.database_manager = DatabaseManager(self.compmgr)
+        self.database_manager.set_database_name('evafm-core.sqlite')
+
         self.sources_manager = SourcesManager(self.compmgr)
         for component in self.components:
             component_name = component.__class__.__name__
@@ -43,3 +52,4 @@ class Core(Component):
         log.debug("Shutting down...")
         self.running = False
         core_shutdown.send(self, _waitall=True)
+

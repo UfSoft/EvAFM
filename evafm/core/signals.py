@@ -14,14 +14,6 @@ core_daemonized = signal("core-daemonized", """\
 This signal is emmited when core has started.
 """)
 
-database_upgraded = signal("database-upgraded", """\
-This signal is emmited when database has been upgraded.
-""")
-
-database_setup = signal("database-setup", """\
-This signal is emmited when database has been setup and is ready to be used.
-""")
-
 core_prepared = signal("core-prepared", """
 This signal is emmited when the core is ready to start processing.
 """)

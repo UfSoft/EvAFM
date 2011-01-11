@@ -8,55 +8,13 @@ import logging
 from datetime import datetime
 from sqlalchemy.orm import create_session
 from sqlalchemy.ext.declarative import declarative_base
-from evafm.core.database.models import db
+from evafm.database.models import db
 
 Model = declarative_base(name='Model')
 metadata = Model.metadata
 
-log = logging.getLogger('evafm.database.upgrades.001')
+log = logging.getLogger('evafm.core.upgrades.001')
 
-class SchemaVersion(Model):
-    """SQLAlchemy-Migrate schema version control table."""
-
-    __tablename__   = 'migrate_version'
-    repository_id   = db.Column(db.String(255), primary_key=True)
-    repository_path = db.Column(db.Text)
-    version         = db.Column(db.Integer)
-
-    def __init__(self, repository_id, repository_path, version):
-        self.repository_id = repository_id
-        self.repository_path = repository_path
-        self.version = version
-
-
-class User(Model):
-    """Repositories users table"""
-    __tablename__ = 'accounts'
-
-    username        = db.Column(db.String, primary_key=True)
-    display_name    = db.Column(db.String(50))
-    password_hash   = db.Column(db.String, default="!")
-    added_on        = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login      = db.Column(db.DateTime, default=datetime.utcnow)
-
-    roles           = db.relation("Role", backref="users",
-                                  secondary='user_roles', cascade="all, delete")
-
-
-class Role(Model):
-    __tablename__   = 'roles'
-    id              = db.Column(db.Integer, primary_key=True)
-    name            = db.Column(db.String(50))
-    description     = db.Column(db.String(200))
-
-    def __init__(self, name, description):
-        self.name = name
-        self.description = description
-
-user_roles = db.Table('user_roles', metadata,
-    db.Column('user_id', db.ForeignKey('accounts.username')),
-    db.Column('role_id', db.ForeignKey('roles.id')),
-)
 
 class Source(Model):
     __tablename__   = 'sources'
@@ -80,6 +38,7 @@ class Source(Model):
         self.buffer_size = buffer_size
         self.buffer_duration = buffer_duration
 
+
 class SilenceCheckerProperties(Model):
     __tablename__   = 'silence_checkers_properties'
 
@@ -93,6 +52,7 @@ class SilenceCheckerProperties(Model):
         self.max_tolerance = max_tolerance
         self.silence_level = silence_level
 
+
 class MessageLevel(Model):
     __tablename__   = 'message_levels'
 
@@ -102,6 +62,7 @@ class MessageLevel(Model):
     def __init__(self, level):
         self.level = level
 
+
 class MessageKind(Model):
     __tablename__   = 'message_kinds'
 
@@ -110,6 +71,7 @@ class MessageKind(Model):
 
     def __init__(self, kind):
         self.kind = kind
+
 
 class Message(Model):
     __tablename__   = 'messages'
@@ -131,20 +93,7 @@ def upgrade(migrate_engine):
     log.debug("Creating Database Tables")
     metadata.create_all(migrate_engine)
 
-    log.debug("Creating local user")
     session = create_session(migrate_engine, autoflush=True, autocommit=False)
-
-    log.info("Add \"admin\" role")
-    session.add(Role('admin', "EvAFM Administration Permission"))
-    session.commit()
-
-    log.info("Add \"authenticated\" role")
-    session.add(Role('authenticated', "EvAFM Administration Permission"))
-    session.commit()
-
-    log.info("Add \"view_only\" role")
-    session.add(Role('authenticated', "EvAFM Administration Permission"))
-    session.commit()
 
     # Add Message Kinds
     log.info("Add message levels")

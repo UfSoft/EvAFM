@@ -10,7 +10,6 @@
 
 import zmq
 import logging
-import gobject
 import blinker.base
 from evafm.common import context
 
@@ -61,7 +60,6 @@ class NamedSignal(blinker.base.NamedSignal):
         # Using '*sender' rather than 'sender=None' allows 'sender' to be
         # used as a keyword argument- i.e. it's an invisible name in the
         # function signature.
-        log.trace("signal: %s  sender: %s  kwargs: %s", self.name, sender, kwargs)
         if len(sender) == 0:
             sender = None
         elif len(sender) > 1:
@@ -71,7 +69,8 @@ class NamedSignal(blinker.base.NamedSignal):
             sender = sender[0]
 
         log.trace("signal: %r  sender: %r  kwargs: %r", self.name, sender, kwargs)
-        gobject.idle_add(publisher.send_pyobj, (self.name, sender, kwargs))
+
+        publisher.send_pyobj((self.name, sender, kwargs))
 
         results = []
         if not self.receivers:

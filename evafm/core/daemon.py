@@ -15,8 +15,6 @@ use_hub('zeromq')
 from eventlet import debug
 debug.hub_blocking_detection(True, 0.5)
 
-import os
-import signal
 import logging
 import giblets.search
 from giblets import ComponentManager

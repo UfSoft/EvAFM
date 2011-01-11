@@ -42,4 +42,10 @@ source_buffered = signal("source-buffered", """\
 This signal is emmited when the source finished buffering.
 """)
 
-source_shutdown = signal("source-shutdown")
+source_shutdown = signal("source-shutdown", """\
+This signal is emmitted when a source has shutdown.
+""")
+
+source_status_updated = signal("source-status-updated", """\
+This signal is emmited when a source's status has been updated.
+""")

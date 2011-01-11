@@ -14,8 +14,10 @@ import gst
 import zmq
 from zmq import devices
 from giblets import implements, ExtensionPoint
+from evafm.checkers.signals import source_status_updated as internal_source_status_updated
 from evafm.common.interfaces import IRPCMethodProvider
 from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN, AUTH_LEVEL_READONLY
+from evafm.sources import STATUS_NONE, STATUS_OK, STATUS_WARNING, STATUS_ERROR
 from evafm.sources.interfaces import SourceBase, ISource, IChecker
 from evafm.sources.signals import *
 
@@ -28,11 +30,15 @@ class Source(SourceBase):
     id = uri = buffer_size = name = buffer_duration = None
 
     def activate(self):
+        self.status = STATUS_NONE
         for checker in self.checkers:
             log.debug("Activating checker %s", checker.get_name())
             checker.activate()
 
     def connect_signals(self):
+        source_playing.connect(self.__on_source_playing)
+        source_stopped.connect(self.__on_source_stopped)
+        internal_source_status_updated.connect(self.__on_internal_status_updated)
         for checker in self.checkers:
             log.debug("Connecting signals for checker %s", checker.get_name())
             checker.connect_signals()
@@ -270,7 +276,6 @@ class Source(SourceBase):
                         message.structure)
         return True
 
-
     def handle_buffering_message(self, bus, message):
         self.buffer_percent = message.structure['buffer-percent']
         log.trace("Source \"%s\" Buffer at %s%%", self.name, self.buffer_percent)
@@ -284,6 +289,31 @@ class Source(SourceBase):
     def handle_redirect_message(self, bus, message):
         print "Got a redirect message"
         self.buffer_percent = message.structure['buffer-percent']
+
+    def __on_source_playing(self, source_id):
+        self.set_status(STATUS_OK)
+
+    def __on_source_stopped(self, source_id):
+        self.set_status(STATUS_NONE)
+
+    def __on_internal_status_updated(self, sender, status):
+        if status == STATUS_OK:
+            # Let's check if all checkers are ok
+            for checker in self.checkers:
+                if checker is sender:
+                    #This checker is the sender of the signal
+                    continue
+                if checker.status == STATUS_ERROR:
+                    status = checker.status
+                    break
+                elif checker.status == STATUS_WARNING:
+                    status = checker.status
+
+        if status != self.status:
+            self.set_status(status)
+
+    def set_status(self, status):
+        source_status_updated.send(self.id, status=status)
 
     @export(AUTH_LEVEL_ADMIN)
     def set_uri(self, uri):

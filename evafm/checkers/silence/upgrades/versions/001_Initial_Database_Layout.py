@@ -55,7 +55,7 @@ def upgrade(migrate_engine):
     for source in session.query(Source).all():
         log.info("Setting source %s checker", source.name)
         if source.name == "Antena 2":
-            checker = SilenceCheckerProperties(source.id)
+            checker = SilenceCheckerProperties()
             checker.min_tolerance = 6
             checker.max_tolerance = 1
             session.add(checker)

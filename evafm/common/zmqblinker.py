@@ -8,12 +8,11 @@
     :license: BSD, see LICENSE for more details.
 """
 
+import zmq
 import logging
-
+import gobject
 import blinker.base
 from evafm.common import context
-
-from eventlet.green import zmq
 
 log = logging.getLogger(__name__)
 
@@ -71,14 +70,19 @@ class NamedSignal(blinker.base.NamedSignal):
         else:
             sender = sender[0]
 
-        # publish signal to zmq
-        publisher.set_identity(sender)
-        publisher.send_pyobj((self.name, sender, kwargs))
+        log.trace("signal: %r  sender: %r  kwargs: %r", self.name, sender, kwargs)
+        gobject.idle_add(publisher.send_pyobj, (self.name, sender, kwargs))
 
+        results = []
         if not self.receivers:
-            return []
-        return [receiver(sender, **kwargs) for
-                receiver in self.receivers_for(sender)]
+            return results
+
+        for receiver in self.receivers_for(sender):
+            try:
+                results.append((receiver, receiver(sender, **kwargs)))
+            except Exception, err:
+                log.exception(err)
+        return results
 
 class Namespace(blinker.base.Namespace):
     """A mapping of signal names to signals."""

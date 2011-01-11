@@ -61,7 +61,7 @@ def upgrade(migrate_engine):
             session.add(checker)
             source.silence_checker = checker
             continue
-        checker = SilenceCheckerProperties(source.id)
+        checker = SilenceCheckerProperties()
         session.add(checker)
         source.silence_checker = checker
     session.commit()

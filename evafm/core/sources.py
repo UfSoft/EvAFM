@@ -104,7 +104,7 @@ class SourcesHeartbeater(BaseComponent, Component):
             message = self.xrep.recv(zmq.NOBLOCK)
             if message:
                 buffer.append(message)
-            if not self.xrep.getsockopt(zmq.RCVMORE):
+            if not self.xrep.rcvmore():
                 # Message is now complete
                 # break to process it!
                 break

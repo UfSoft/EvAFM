@@ -148,8 +148,7 @@ class SourcesManager(BaseComponent, Component):
         eventlet.spawn_after(2, self.__launch_sources)
 
     def __launch_sources(self):
-        session = self.db.get_session()
-        for source in session.query(Source).filter_by(enabled=True).all():
+        for source in Source.query.filter_by(enabled=True).all():
             self.sources[source.id] = {}
             eventlet.spawn_after(
                 source.id*0.3, self.__launch_source, source.name, source.id
@@ -196,8 +195,7 @@ class SourcesManager(BaseComponent, Component):
         pidfile.close()
         self.sources[source_id]['pid'] = int(pid)
 
-        session = self.db.get_session()
-        source = session.query(Source).get(source_id)
+        source = Source.query.get(source_id)
         log.info("Source %s is now alive", source.name)
         socket = context.socket(zmq.REQ)
         socket.connect("ipc://run/source-%s" % source.id)

@@ -27,6 +27,8 @@ from sqlalchemy.engine.url import make_url, URL
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from evafm.core.signals import database_setup
+
 log = logging.getLogger(__name__)
 
 #: create a new module for all the database related functions and objects
@@ -93,15 +95,21 @@ class Model(object):
 #def _create_scoped_session(db):
 #    return orm.scoped_session(partial(_SignallingSession, db))
 #
-#class _QueryProperty(object):
-#
-#    def __get__(self, obj, type):
-#        try:
-#            mapper = orm.class_mapper(type)
-#            if mapper:
-#                return type.query_class(mapper, session=self.sa.session())
-#        except UnmappedClassError:
-#            return None
+class _QueryProperty(object):
+
+    def __init__(self):
+        database_setup.connect(self.__on_database_setup)
+
+    def __on_database_setup(self, sender):
+        self.db = sender
+
+    def __get__(self, obj, type):
+        try:
+            mapper = orm.class_mapper(type)
+            if mapper:
+                return type.query_class(mapper, session=self.db.get_session())
+        except UnmappedClassError:
+            return None
 
 
 
@@ -110,7 +118,7 @@ db.or_ = or_
 #del and_, or_
 
 Model = declarative_base(cls=Model, name='Model')
-#Model.query = _QueryProperty()
+Model.query = _QueryProperty()
 metadata = Model.metadata
 
 db.metadata = metadata

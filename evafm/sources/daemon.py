@@ -66,6 +66,7 @@ class Daemon(BaseDaemon):
     @classmethod
     def cli(cls):
         parser = BaseOptionParser()
+        parser.set_usage("usage: %prog [options] source_id")
         (options, args) = parser.parse_args()
 
         if not args:

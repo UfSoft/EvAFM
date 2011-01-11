@@ -21,9 +21,9 @@ from evafm.common.log import set_loglevel, setup_logging, log_levels
 
 class BaseOptionParser(OptionParser):
     def __init__(self):
-        OptionParser.__init__(self, usage="usage: %prog [options] source_id",
-                              version=("%s:%%prog " % __package_name__) +
-                              __version__)
+        OptionParser.__init__(
+            self, version=("%s:%%prog " % __package_name__) + __version__
+        )
 
         self.add_option('-p', '--pidfile', help="Pidfile path",
                         default=None, metavar='PIDFILE_PATH')

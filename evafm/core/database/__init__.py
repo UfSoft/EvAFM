@@ -13,10 +13,12 @@
 """
 
 import logging
+import eventlet
 import sqlalchemy
 from os import path
 from sqlalchemy import orm
 from sqlalchemy.engine.url import URL
+migrate = eventlet.import_patched("migrate")
 from migrate.versioning.api import upgrade
 from migrate.versioning.repository import Repository
 from giblets import implements, Component, ExtensionPoint
@@ -58,10 +60,12 @@ class DatabaseManager(Component):
             )
             session.commit()
 
+        upgrade_engine = self.create_engine()
         schema_version = session.query(models.SchemaVersion).first()
         if schema_version.version < repository.latest:
             log.warn("Upgrading database (from -> to...)")
-            upgrade(self.create_engine(), repository)
+            eventlet.spawn(upgrade, upgrade_engine, repository)
+            eventlet.sleep(0.1)
             log.warn("Upgrade complete")
         else:
             log.debug("No database upgrade required")
@@ -69,10 +73,12 @@ class DatabaseManager(Component):
         for component in self.components:
             log.debug("Checking required upgrade for %s",
                       component.__class__.__name__)
-            component.upgrade_database(
-                self.create_engine(), session, models.SchemaVersion
-            )
+            eventlet.spawn(component.upgrade_database,
+                           upgrade_engine,
+                           session, models.SchemaVersion)
+            eventlet.sleep(0.1)
         database_upgraded.send(self)
+        eventlet.sleep(0.1)
         self.engine = self.create_engine()
 
     def __on_database_upgraded(self, sender):

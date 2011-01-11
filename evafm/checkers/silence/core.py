@@ -9,6 +9,7 @@
 """
 
 import logging
+import eventlet
 from os import path
 
 from eventlet.green import zmq
@@ -60,7 +61,7 @@ class SilenceCheckerCore(BaseComponent, Component):
 
         if schema_version.version < repository.latest:
             log.warn("Upgrading database (from -> to...)")
-            upgrade(engine, repository)
+            eventlet.spawn(upgrade, engine, repository)
             log.warn("Upgrade complete")
         else:
             log.debug("No database upgrade required")

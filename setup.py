@@ -40,6 +40,7 @@ setup(name=evafm.__package_name__,
       },
       entry_points = """
       [console_scripts]
+      %s = evafm.web.daemon:start_daemon
       %s = evafm.core.daemon:start_daemon
       %s = evafm.sources.daemon:start_daemon
 
@@ -54,7 +55,9 @@ setup(name=evafm.__package_name__,
 
       [evafm.core.checkers]
       silence = evafm.checkers.silence.core
-      """ % (evafm.__core_script_name__, evafm.__sources_script_name__),
+      """ % (evafm.__web_script_name__,
+             evafm.__core_script_name__,
+             evafm.__sources_script_name__),
       classifiers=[
           'Development Status :: 5 - Alpha',
           'Environment :: Web Environment',

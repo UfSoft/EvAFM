@@ -14,5 +14,6 @@ __license__      = 'BSD'
 __url__          = 'http://rtp.ufsoft.org/EvNam'
 __description__  = __doc__
 
+__web_script_name__     = 'evafm-web'
 __core_script_name__    = 'evafm-core'
 __sources_script_name__ = 'evafm-source'

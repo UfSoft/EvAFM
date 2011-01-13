@@ -13,6 +13,7 @@ import eventlet
 from giblets import implements, Component, ExtensionPoint
 from evafm.core import upgrades
 from evafm.core.interfaces import ICoreComponent
+from evafm.core.forwarder import ZMQForwarder
 from evafm.database import DatabaseManager
 from evafm.database.interfaces import IDatabaseUpgradeParticipant
 from evafm.core.sources import SourcesManager
@@ -33,6 +34,7 @@ class Core(Component):
         # Register components into ComponentManager
         self.database_manager = DatabaseManager(self.compmgr)
         self.database_manager.set_database_name('evafm-core.sqlite')
+        self.forwarder = ZMQForwarder(self.compmgr)
 
         self.sources_manager = SourcesManager(self.compmgr)
         for component in self.components:

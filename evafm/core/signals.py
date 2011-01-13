@@ -40,3 +40,4 @@ source_dead = signal("source-dead", """\
 This signal is emmited when a sources heart starts beating and the sources
 manager knows about it.
 """)
+

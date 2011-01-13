@@ -13,7 +13,7 @@ import eventlet
 import time
 use_hub('zeromq')
 from eventlet import debug
-debug.hub_blocking_detection(True, 0.5)
+debug.hub_blocking_detection(True, 0.3)
 
 import logging
 import giblets.search

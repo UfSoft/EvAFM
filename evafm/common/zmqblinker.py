@@ -9,6 +9,7 @@
 """
 
 import zmq
+import time
 import logging
 import blinker.base
 from evafm.common import context
@@ -25,9 +26,8 @@ class Publisher(object):
         _publisher = object.__getattribute__(self, '_publisher')
         if not _publisher:
             self._publisher = _publisher = context.socket(zmq.PUB)
-            _publisher.bind('ipc://run/sources-events')
-            import time
-            time.sleep(0.5) # Allow socket's some time to get stable
+            _publisher.connect('ipc://run/sources-events-in')
+            time.sleep(0.2) # Allow socket's some time to get stable
 
         if name in ("set_identity", "_identity", "_publisher"):
             return object.__getattribute__(self, name)

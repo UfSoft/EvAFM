@@ -98,10 +98,23 @@ class BaseDaemon(object):
         if not self.pidfile:
             return
         if os.path.isfile(self.pidfile):
-            print ("Pidfile %r exists! Delete it and re-try. Exiting..." %
-                   self.pidfile)
-            sys.exit(1)
-
+            try:
+                import psi.process
+                from psi.process import NoSuchProcessError
+                pid = int(open(self.pidfile, 'r').read())
+                process = psi.process.Process(pid=pid)
+                if 'evafm-' in process.command:
+                    os.unlink(self.pidfile)
+                else:
+                    print ("Pidfile %r exists! Delete it and re-try. "
+                           "Exiting..." % self.pidfile)
+                    sys.exit(1)
+            except NoSuchProcessError:
+                os.unlink(self.pidfile)
+            except ImportError:
+                print ("Pidfile %r exists! Delete it and re-try. "
+                       "Exiting..." % self.pidfile)
+                sys.exit(1)
 
     def write_pid(self):
         if not self.pidfile:

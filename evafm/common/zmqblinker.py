@@ -70,7 +70,7 @@ class NamedSignal(blinker.base.NamedSignal):
 
         log.trace("signal: %r  sender: %r  kwargs: %r", self.name, sender, kwargs)
 
-        publisher.send_pyobj((self.name, sender, kwargs))
+        publisher.send_pyobj(dict(event=self.name, sender=sender, kwargs=kwargs))
 
         results = []
         if not self.receivers:

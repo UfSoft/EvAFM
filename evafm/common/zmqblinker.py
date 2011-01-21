@@ -12,6 +12,7 @@ import zmq
 import time
 import logging
 import blinker.base
+from datetime import datetime
 from evafm.common import context
 
 log = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ class Publisher(object):
             self._publisher.setsockopt(zmq.IDENTITY, identity)
 
 publisher = Publisher()
+
 
 class NamedSignal(blinker.base.NamedSignal):
     def __init__(self, name, doc=None):
@@ -70,7 +72,11 @@ class NamedSignal(blinker.base.NamedSignal):
 
         log.trace("signal: %r  sender: %r  kwargs: %r", self.name, sender, kwargs)
 
-        publisher.send_pyobj(dict(event=self.name, sender=sender, kwargs=kwargs))
+        if self.__class__.__name__ == 'ZMQNamedSignal':
+            publisher.send_pyobj(dict(
+                event=self.name, sender=sender, kwargs=kwargs,
+                stamp=datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S")
+            ))
 
         results = []
         if not self.receivers:
@@ -82,6 +88,9 @@ class NamedSignal(blinker.base.NamedSignal):
             except Exception, err:
                 log.exception(err)
         return results
+
+class ZMQNamedSignal(NamedSignal):
+    pass
 
 class Namespace(blinker.base.Namespace):
     """A mapping of signal names to signals."""
@@ -95,12 +104,17 @@ class Namespace(blinker.base.Namespace):
         try:
             return self[name]
         except KeyError:
+            if self.__class__.__name__ == 'ZMQNamespace':
+                return self.setdefault(name, ZMQNamedSignal(name, doc))
             return self.setdefault(name, NamedSignal(name, doc))
 
-signal = blinker.base.Namespace().signal
-zmqsignal = Namespace().signal
+class ZMQNamespace(Namespace):
+    pass
+
+signal = Namespace().signal
+zmqsignal = ZMQNamespace().signal
 
 # Monkey Patch
-blinker.base.signal = signal
-blinker.base.Namespace = Namespace
-blinker.base.NamedSignal = NamedSignal
+#blinker.base.signal = signal
+#blinker.base.Namespace = Namespace
+#blinker.base.NamedSignal = NamedSignal

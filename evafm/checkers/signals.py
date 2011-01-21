@@ -10,6 +10,6 @@
 
 from evafm.common.zmqblinker import signal
 
-source_status_updated = signal("source-status-updated", """\
+checker_status_updated = signal("checker-status-updated", """\
 This signal is emmited when a source's status has been updated.
 """)

@@ -9,58 +9,69 @@
 """
 
 import sys
-import zmq
 import logging
-import gobject
+import eventlet
 import traceback
+from eventlet.green import zmq
 from evafm.common import context, rpcserver
-from evafm.sources.signals import source_daemonized, source_undaemonized
+from evafm.core.signals import core_daemonized, core_undaemonized
 
 log = logging.getLogger(__name__)
 
 class RPCServer(rpcserver.RPCServer):
+    rpc_methods_basename = 'core'
+
+    def activate(self):
+        log.debug("Activating %s", self.__class__.__name__)
 
     def connect_signals(self):
-        source_daemonized.connect(self.listen)
-        source_undaemonized.connect(self.stop)
-
-    def register_our_rpc_object(self):
-        self.register_rpc_object(self, name="source")
-
+        log.debug("Connecting signals for %s", self.__class__.__name__)
+        core_daemonized.connect(self.listen)
+        core_undaemonized.connect(self.stop)
 
     def listen(self, sender):
-        address = "ipc://run/source-%s" % sender
+        address = "ipc://run/core-rpc"
         log.info("RPCServer listening on %s", address)
         self.context = context
         self.rep = self.context.socket(zmq.REP)
         self.rep.bind(address)
-        self.in_io_watch = gobject.io_add_watch(
-            self.rep.getsockopt(zmq.FD), gobject.IO_IN,
-            self.__on_io_events_available
-        )
+        eventlet.spawn_after(1, self.check_for_incoming_rpc_calls)
 
     def stop(self, sender):
         log.info("RPCServer stopped")
-        gobject.source_remove(self.in_io_watch)
 
-    def __on_io_events_available(self, source_fd, condition):
+
+    def check_for_incoming_rpc_calls(self):
         while True:
             events = self.rep.getsockopt(zmq.EVENTS)
-            if not (events & zmq.POLLIN):
-                break
-            elif (events & zmq.POLLERR):
+            if ( events & zmq.POLLIN ):
+                eventlet.spawn_n(self.handle_incoming_rpc_call)
+            elif ( events & zmq.POLLERR ):
                 print 'zmq.POLLERR'
-                import sys
                 e = sys.exc_info()[1]
                 if e.errno == zmq.EAGAIN:
                     # state changed since poll event
                     pass
                 else:
                     print zmq.strerror(e.errno)
+            eventlet.sleep(0.001)
+
+    def handle_incoming_rpc_call(self):
+        log.debug("Handling incoming rpc call")
+        buffer = []
+        while True:
             message = self.rep.recv_pyobj(zmq.NOBLOCK)
-            method, args, kwargs = self.parse_rpc_message(message)
-            self.rep.send_pyobj(self.handle_rpc_call(method, args, kwargs))
-        return True # Keep gobject re-schedulling
+            if message:
+                buffer.append(message)
+            if not self.rep.rcvmore():
+                # Message is now complete
+                # break to process it!
+                break
+        log.debug("\n\nINCOMING MESSAGE: %s", buffer)
+        message = buffer[0]
+        method, args, kwargs = self.parse_rpc_message(message)
+        result = self.handle_rpc_call(method, args, kwargs)
+        self.rep.send_pyobj(result)
 
     def handle_rpc_call(self, method, args, kwargs):
         success = False
@@ -72,11 +83,13 @@ class RPCServer(rpcserver.RPCServer):
                   method, args, kwargs)
         try:
             result = self.rpc_methods[method](*args, **kwargs)
+            log.debug("Result: %s", result)
             success = True
-            if result is not None:
+            if result:
                 return dict(result=result, success=success)
             return dict(success=success)
         except KeyError:
+            log.trace("Known RPCMEthods: %s", self.rpc_methods)
             failure = "RPCMethod \"%s\" unknown" % method
             log.error(failure)
             success = False

@@ -17,7 +17,8 @@ from eventlet.green import zmq, subprocess
 from giblets import implements, Component, ExtensionPoint
 from evafm import __sources_script_name__
 from evafm.common import context
-from evafm.common.interfaces import BaseComponent
+from evafm.common.interfaces import BaseComponent, IRPCMethodProvider
+from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN
 from evafm.core.models import Source
 from evafm.core.interfaces import ICheckerCore, ICoreComponent
 from evafm.core.signals import (core_daemonized, core_shutdown, core_prepared,
@@ -121,7 +122,7 @@ class SourcesHeartbeater(BaseComponent, Component):
             log.warn("got bad heartbeat (possibly old?): %s", heart)
 
 class SourcesManager(BaseComponent, Component):
-    implements(ICoreComponent)
+    implements(ICoreComponent, IRPCMethodProvider)
     checkers = ExtensionPoint(ICheckerCore)
 
     def activate(self):
@@ -149,7 +150,12 @@ class SourcesManager(BaseComponent, Component):
 
     def __launch_sources(self):
         for source in Source.query.filter_by(enabled=True).all():
-            self.sources[source.id] = {}
+            self.sources[source.id] = {
+                'name': source.name,
+                'uri': source.uri,
+                'buffer_size': source.buffer_size,
+                'buffer_duration': source.buffer_duration
+            }
             eventlet.spawn_after(
                 source.id*0.3, self.__launch_source, source.name, source.id
             )
@@ -239,3 +245,38 @@ class SourcesManager(BaseComponent, Component):
                 continue
             except Exception, err:
                 log.exception(err)
+
+    def __filtered_sources(self):
+        sources = {}
+        for source_id, details in self.sources.iteritems():
+            sources[source_id] = {}
+            for key, value in details.iteritems():
+                if key in ('socket',):
+                    continue
+                sources[source_id][key] = value
+        return sources
+
+    @export(AUTH_LEVEL_ADMIN)
+    def get_enabled_sources(self):
+        return [(sid, details) for (sid, details) in
+                self.__filtered_sources().iteritems()]
+
+    @export(AUTH_LEVEL_ADMIN)
+    def get_source_details(self, source_id):
+        log.debug("On sourcesmanager.get_source_details for %r. Exists: %s",
+                  source_id, int(source_id) in self.sources)
+        if source_id not in self.sources or 'socket' not in self.sources[source_id]:
+            log.warn("No socket available!!!!")
+            return ''
+
+        self.sources[source_id]['socket'].send_pyobj({'method': 'source.get_details'})
+        result = self.sources[source_id]['socket'].recv_pyobj()
+        log.debug("Result: %s", result)
+        if result['success']:
+            return result['result']
+        else:
+            if 'traceback' in result:
+                log.trace(result['traceback'])
+            else:
+                log.error(result)
+            return {}

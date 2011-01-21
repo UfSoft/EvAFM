@@ -14,10 +14,11 @@ import gst
 import zmq
 from zmq import devices
 from giblets import implements, ExtensionPoint
-from evafm.checkers.signals import source_status_updated as internal_source_status_updated
+from evafm.checkers.signals import checker_status_updated
 from evafm.common.interfaces import IRPCMethodProvider
 from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN, AUTH_LEVEL_READONLY
-from evafm.sources import STATUS_NONE, STATUS_OK, STATUS_WARNING, STATUS_ERROR
+from evafm.sources import (STATUS_NONE, STATUS_OK, STATUS_WARNING, STATUS_ERROR,
+                           STATUS_NAMES)
 from evafm.sources.interfaces import SourceBase, ISource, IChecker
 from evafm.sources.signals import *
 
@@ -31,6 +32,7 @@ class Source(SourceBase):
 
     def activate(self):
         self.status = STATUS_NONE
+        self.status_name = STATUS_NAMES[STATUS_NONE]
         for checker in self.checkers:
             log.debug("Activating checker %s", checker.get_name())
             checker.activate()
@@ -38,7 +40,7 @@ class Source(SourceBase):
     def connect_signals(self):
         source_playing.connect(self.__on_source_playing)
         source_stopped.connect(self.__on_source_stopped)
-        internal_source_status_updated.connect(self.__on_internal_status_updated)
+        checker_status_updated.connect(self.__on_checker_status_updated)
         for checker in self.checkers:
             log.debug("Connecting signals for checker %s", checker.get_name())
             checker.connect_signals()
@@ -296,7 +298,8 @@ class Source(SourceBase):
     def __on_source_stopped(self, source_id):
         self.set_status(STATUS_NONE)
 
-    def __on_internal_status_updated(self, sender, status):
+    def __on_checker_status_updated(self, sender, status=None, status_name=None):
+        log.trace("Source catched a checker's status update")
         if status == STATUS_OK:
             # Let's check if all checkers are ok
             for checker in self.checkers:
@@ -313,7 +316,12 @@ class Source(SourceBase):
             self.set_status(status)
 
     def set_status(self, status):
-        source_status_updated.send(self.id, status=status)
+        log.debug("Setting source \"%s\" to status \"%s\"", self.name, STATUS_NAMES[status])
+        self.status = status
+        self.status_name = STATUS_NAMES[status]
+        source_status_updated.send(
+            self.id, status=status, status_name=self.status_name
+        )
 
     @export(AUTH_LEVEL_ADMIN)
     def set_uri(self, uri):
@@ -352,6 +360,26 @@ class Source(SourceBase):
     @export(AUTH_LEVEL_READONLY)
     def get_buffer_duration(self):
         return self.buffer_duration
+
+    @export(AUTH_LEVEL_READONLY)
+    def get_details(self):
+        details = dict(
+            id              = self.id,
+            uri             = self.uri,
+            name            = self.name,
+            status          = self.status,
+            status_name     = self.status_name,
+            safe_name       = self.safe_name,
+            buffer_size     = self.buffer_size,
+            buffer_duration = self.buffer_duration,
+            buffer_percent  = self.buffer_percent,
+            playing         = self.previous_state==gst.STATE_PLAYING,
+            stopped         = self.previous_state==gst.STATE_NULL,
+            paused          = self.previous_state==gst.STATE_PAUSED,
+        )
+        for checker in self.checkers:
+            details[checker.__class__.__name__.lower()] = checker.get_details()
+        return details
 
 if __name__ == '__main__':
     source = Source("rtmp://h2b.rtp.pt/liveradio/antena180a")

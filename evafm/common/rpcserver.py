@@ -57,13 +57,15 @@ class RPCServer(Component):
     implements(IRPCServer)
 
     rpc_providers = ExtensionPoint(IRPCMethodProvider)
+    rpc_methods_basename = 'rpcserver'
 
     def __init__(self, *args, **kwargs):
         super(RPCServer, self).__init__(*args, **kwargs)
         self.rpc_methods = {}
         self.connect_signals()
-        self.register_rpc_object(self, name="rpcserver")
+        self.register_our_rpc_object()
         for provider in self.rpc_providers:
+            log.debug("Found RPC Methods Provider: %s", provider.__class__.__name__)
             name = getattr(provider, 'rpc_methods_basename', None)
             self.register_rpc_object(provider, name=name)
 
@@ -76,8 +78,20 @@ class RPCServer(Component):
     def stop(self, sender):
         raise NotImplementedError
 
+    def parse_rpc_message(self, message):
+        method = message.get('method')
+        args = message.get('args', [])
+        if not isinstance(args, (list, tuple)):
+            args = [args]
+        kwargs = message.get('kwargs', {})
+        return method, args, kwargs
+
     def handle_rpc_call(self, method, args, kwargs):
         raise NotImplementedError
+
+
+    def register_our_rpc_object(self):
+        self.register_rpc_object(self, name=self.rpc_methods_basename)
 
     def register_rpc_object(self, obj, name=None):
         """

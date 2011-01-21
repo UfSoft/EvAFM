@@ -13,10 +13,10 @@ import time
 import logging
 import gobject
 from giblets import implements
-from evafm.checkers.signals import source_status_updated
+from evafm.checkers.signals import checker_status_updated
 from evafm.common.interfaces import IRPCMethodProvider
 from evafm.common.rpcserver import export, AUTH_LEVEL_ADMIN
-from evafm.sources import STATUS_NONE, STATUS_OK, STATUS_WARNING, STATUS_ERROR
+from evafm.sources import STATUS_NONE, STATUS_OK, STATUS_WARNING, STATUS_ERROR, STATUS_NAMES
 from evafm.sources.interfaces import CheckerBase, IChecker
 from evafm.sources.signals import signal
 
@@ -146,7 +146,8 @@ class SilenceChecker(CheckerBase):
 
     def set_status(self, status):
         self.status = status
-        source_status_updated.send(self, status=status)
+        checker_status_updated.send(self, status=status,
+                                    status_name=STATUS_NAMES[status])
 
     def emit(self, kind, message, levels):
         log.debug("Emitting Silence Message for %s. "
@@ -374,3 +375,11 @@ class SilenceChecker(CheckerBase):
     @export(AUTH_LEVEL_ADMIN)
     def get_silence_level(self):
         return self.silence_level
+
+    @export(AUTH_LEVEL_ADMIN)
+    def get_details(self):
+        return dict(
+            min_tolerance = self.min_tolerance,
+            max_tolerance = self.max_tolerance,
+            silence_level = self.silence_level
+        )

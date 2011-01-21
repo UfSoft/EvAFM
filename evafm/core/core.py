@@ -16,6 +16,7 @@ from evafm.core.interfaces import ICoreComponent
 from evafm.core.forwarder import ZMQForwarder
 from evafm.database import DatabaseManager
 from evafm.database.interfaces import IDatabaseUpgradeParticipant
+from evafm.core.rpcserver import RPCServer
 from evafm.core.sources import SourcesManager
 from evafm.core.signals import core_prepared, core_shutdown
 
@@ -35,6 +36,9 @@ class Core(Component):
         self.database_manager = DatabaseManager(self.compmgr)
         self.database_manager.set_database_name('evafm-core.sqlite')
         self.forwarder = ZMQForwarder(self.compmgr)
+        self.rpc = RPCServer(self.compmgr)
+        self.rpc.activate()
+        self.rpc.connect_signals()
 
         self.sources_manager = SourcesManager(self.compmgr)
         for component in self.components:

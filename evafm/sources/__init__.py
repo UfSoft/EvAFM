@@ -1,1 +1,8 @@
 STATUS_NONE, STATUS_OK, STATUS_WARNING, STATUS_ERROR = range(4)
+
+STATUS_NAMES = {
+    STATUS_NONE: "none",
+    STATUS_OK: "ok",
+    STATUS_WARNING: "warning",
+    STATUS_ERROR: "error"
+}
